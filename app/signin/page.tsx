@@ -3,18 +3,67 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Demo: redirect al dashboard (luego conectar con auth real)
-    router.push('/dashboard');
+    setError(null);
+
+    if (!email.trim()) {
+      setError('El correo electrónico es requerido');
+      return;
+    }
+
+    if (!password) {
+      setError('La contraseña es requerida');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const text = await res.text();
+      let data: { error?: string };
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        setError(`Error del servidor (${res.status}). La API no devolvió JSON válido.`);
+        console.error('API response:', text?.slice(0, 300));
+        return;
+      }
+
+      if (!res.ok) {
+        setError(data.error || 'Error al iniciar sesión');
+        return;
+      }
+
+      const from = searchParams.get('from') || '/dashboard';
+      router.push(from);
+      router.refresh();
+    } catch {
+      setError('Error de conexión. Verifica que el servidor esté corriendo y la base de datos accesible.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,6 +83,12 @@ export default function SignInPage() {
           <p className="c-grey-600 fsz-sm mT-5">Ingresa tus credenciales para acceder a tu cuenta</p>
         </div>
 
+        {error && (
+          <div className="alert alert-danger mB-20" role="alert">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <label htmlFor="signin-email" className="form-label">
@@ -46,6 +101,7 @@ export default function SignInPage() {
               placeholder="correo@ejemplo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div className="mb-3">
@@ -59,6 +115,7 @@ export default function SignInPage() {
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div className="mb-3">
@@ -69,14 +126,19 @@ export default function SignInPage() {
                 id="signin-remember"
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
+                disabled={loading}
               />
               <label className="form-check-label" htmlFor="signin-remember">
                 Recordarme
               </label>
             </div>
           </div>
-          <button type="submit" className="btn btn-primary w-100">
-            Entrar
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            disabled={loading}
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 

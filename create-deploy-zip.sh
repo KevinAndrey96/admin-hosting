@@ -11,8 +11,8 @@ if [ ! -f ".next/standalone/server.js" ]; then
   echo "✗ Missing .next/standalone/server.js - run first: npm run build"
   exit 1
 fi
-if [ ! -d ".next/static" ]; then
-  echo "✗ Missing .next/static - run first: npm run build"
+if [ ! -d ".next/standalone/.next/static" ]; then
+  echo "✗ Missing .next/standalone/.next/static - run first: npm run build"
   exit 1
 fi
 echo "✓ Build OK"
@@ -59,7 +59,6 @@ if [ "$INCLUDE_ENV" = true ]; then
     next.config.js \
     tsconfig.json \
     .next/standalone \
-    .next/static \
     app \
     lib \
     prisma \
@@ -76,7 +75,6 @@ else
     next.config.js \
     tsconfig.json \
     .next/standalone \
-    .next/static \
     app \
     lib \
     prisma \
@@ -93,7 +91,7 @@ if [ "$INCLUDE_ENV" = true ]; then
   echo "   - .env.local (environment variables)"
 fi
 echo "   - package.json, start-server.js, next.config.js, tsconfig.json"
-echo "   - .next/standalone + .next/static"
+echo "   - .next/standalone (includes static + public)"
 echo "   - app/, lib/, prisma/, types/, public/"
 echo ""
 if [ "$INCLUDE_ENV" = true ]; then

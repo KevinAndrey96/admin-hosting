@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '../hooks/useTheme';
 
 type HeaderDropdown = 'notifications' | 'emails' | 'user' | null;
 
 export default function Topbar() {
+  const router = useRouter();
   const { theme, toggleTheme, mounted } = useTheme();
   const [searchActive, setSearchActive] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<HeaderDropdown>(null);
@@ -216,10 +218,20 @@ export default function Topbar() {
               </li>
               <li role="separator" className="divider" />
               <li>
-                <Link href="/signin" className="d-b td-n pY-5 bgcH-grey-100 c-grey-700">
+                <a
+                  href="#"
+                  className="d-b td-n pY-5 bgcH-grey-100 c-grey-700"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+                    await fetch(`${basePath}/api/auth/logout`, { method: 'POST' });
+                    router.push('/signin');
+                    router.refresh();
+                  }}
+                >
                   <i className="ti-power-off mR-10" />
                   <span>Cerrar sesión</span>
-                </Link>
+                </a>
               </li>
             </ul>
           </li>

@@ -16,7 +16,7 @@ function safeSetStorage(value: string): void {
   try {
     localStorage.setItem(THEME_KEY, value);
   } catch {
-    // Modo privado o localStorage no disponible - tema solo para esta sesión
+    // Private mode or localStorage unavailable - theme only for this session
   }
 }
 

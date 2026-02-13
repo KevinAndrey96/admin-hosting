@@ -21,6 +21,6 @@ RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
 # Proxy ALL requests (including /_next/) to Node.js server
-# Next.js standalone server will handle serving static files from .next/static/
+# Use REQUEST_URI to preserve full path (/admin/...) - required for basePath
 RewriteCond %{REQUEST_URI} !^/\.well-known
-RewriteRule ^(.*)$ http://127.0.0.1:3001/$1 [P,L]
+RewriteRule ^ http://127.0.0.1:3001%{REQUEST_URI} [P,L]

@@ -53,8 +53,8 @@ if (DEBUG) {
 
 // Verify required files exist
 const serverPath = path.join(scriptDir, '.next', 'standalone', 'server.js');
-const staticPath = path.join(scriptDir, '.next', 'static');
-const publicPath = path.join(scriptDir, 'public');
+const staticPath = path.join(scriptDir, '.next', 'standalone', '.next', 'static');
+const publicPath = path.join(scriptDir, '.next', 'standalone', 'public');
 
 if (DEBUG) {
   console.log('Checking files...');

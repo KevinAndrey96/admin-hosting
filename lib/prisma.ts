@@ -16,6 +16,7 @@ function createPrismaClient() {
     user: parsed.username,
     password: parsed.password,
     database: parsed.pathname.slice(1) || undefined,
+    ssl: false, // Server does not support SSL
   });
 
   return new PrismaClient({ adapter });
