@@ -84,7 +84,7 @@ export default function SignUpPage() {
         <div className="ta-c mB-30">
           <Link href="/" className="td-n">
             <Image
-              src="/assets/static/images/logo.svg"
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/logo.svg`}
               alt="Adminator"
               width={60}
               height={60}

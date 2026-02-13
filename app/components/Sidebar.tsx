@@ -41,7 +41,7 @@ export default function Sidebar() {
                   <div className="peer">
                     <div className="logo">
                       <Image
-                        src="/assets/static/images/logo.svg"
+                        src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/logo.svg`}
                         alt="Adminator"
                         width={42}
                         height={42}
