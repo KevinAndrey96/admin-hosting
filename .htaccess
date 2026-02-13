@@ -1,0 +1,26 @@
+RewriteEngine On
+
+# Remove trailing slash
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)/$ /$1 [R=301,L]
+
+# Serve static files from public/ directory if they exist
+RewriteCond %{REQUEST_URI} !^/_next/
+RewriteCond %{REQUEST_URI} !^/\.well-known
+RewriteCond %{DOCUMENT_ROOT}/admin/public%{REQUEST_URI} -f
+RewriteRule ^(.*)$ /admin/public/$1 [L]
+
+# Don't proxy requests for static files that exist in root
+RewriteCond %{REQUEST_URI} !^/_next/
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Don't proxy requests for directories that exist
+RewriteCond %{REQUEST_URI} !^/_next/
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Proxy ALL requests (including /_next/) to Node.js server
+# Next.js standalone server will handle serving static files from .next/static/
+RewriteCond %{REQUEST_URI} !^/\.well-known
+RewriteRule ^(.*)$ http://127.0.0.1:3001/$1 [P,L]

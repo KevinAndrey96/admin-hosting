@@ -12,7 +12,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (pathname?.startsWith('/tables')) setOpenDropdown('tables');
     else if (pathname?.startsWith('/maps')) setOpenDropdown('maps');
-    else if (pathname && ['/blank', '/404', '/500', '/signin', '/signup'].includes(pathname)) setOpenDropdown('pages');
+    else if (pathname && ['/blank', '/error-404', '/error-500', '/signin', '/signup'].includes(pathname)) setOpenDropdown('pages');
     else setOpenDropdown(null);
   }, [pathname]);
 
@@ -184,8 +184,8 @@ export default function Sidebar() {
             </a>
             <ul className="dropdown-menu">
               <li><Link href="/blank" className="sidebar-dropdown-link">Blank</Link></li>
-              <li><Link href="/404" className="sidebar-dropdown-link">404</Link></li>
-              <li><Link href="/500" className="sidebar-dropdown-link">500</Link></li>
+              <li><Link href="/error-404" className="sidebar-dropdown-link">404</Link></li>
+              <li><Link href="/error-500" className="sidebar-dropdown-link">500</Link></li>
               <li><Link href="/signin" className="sidebar-dropdown-link">Iniciar sesión</Link></li>
               <li><Link href="/signup" className="sidebar-dropdown-link">Registro</Link></li>
             </ul>
