@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npx prisma generate && next build",
     "start": "node start-server.js",
     "lint": "next lint",
     "db:generate": "npx prisma generate",
@@ -22,7 +22,8 @@
     "@fullcalendar/list": "^6.1.20",
     "@fullcalendar/react": "^6.1.20",
     "@fullcalendar/timegrid": "^6.1.20",
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^7",
+    "@prisma/adapter-mariadb": "^7",
     "bootstrap": "^5.3.8",
     "chart.js": "^4.5.1",
     "dayjs": "^1.11.19",
@@ -43,7 +44,7 @@
     "eslint": "^8",
     "eslint-config-next": "13.5.11",
     "postcss": "^8",
-    "prisma": "^5.22.0",
+    "prisma": "^7",
     "sass": "^1.97.3",
     "tailwindcss": "^3",
     "typescript": "^5"
