@@ -36,7 +36,7 @@ export default function Sidebar() {
         <div className="sidebar-logo">
           <div className="peers ai-c fxw-nw">
             <div className="peer peer-greed">
-              <Link href="/" className="sidebar-link td-n">
+              <Link href="/dashboard" className="sidebar-link td-n">
                 <div className="peers ai-c fxw-nw">
                   <div className="peer">
                     <div className="logo">
@@ -66,8 +66,8 @@ export default function Sidebar() {
         </div>
 
         <ul className="sidebar-menu scrollable pos-r">
-          <li className="nav-item actived mT-30">
-            <Link href="/" className="sidebar-link">
+          <li className={`nav-item mT-30 ${pathname === '/dashboard' ? 'actived' : ''}`}>
+            <Link href="/dashboard" className="sidebar-link">
               <span className="icon-holder">
                 <i className="c-blue-500 ti-home" />
               </span>
@@ -186,8 +186,8 @@ export default function Sidebar() {
               <li><Link href="/blank" className="sidebar-dropdown-link">Blank</Link></li>
               <li><Link href="/404" className="sidebar-dropdown-link">404</Link></li>
               <li><Link href="/500" className="sidebar-dropdown-link">500</Link></li>
-              <li><Link href="/signin" className="sidebar-dropdown-link">Sign In</Link></li>
-              <li><Link href="/signup" className="sidebar-dropdown-link">Sign Up</Link></li>
+              <li><Link href="/signin" className="sidebar-dropdown-link">Iniciar sesión</Link></li>
+              <li><Link href="/signup" className="sidebar-dropdown-link">Registro</Link></li>
             </ul>
           </li>
           <li className={`nav-item dropdown ${openDropdown === 'levels' ? 'open' : ''}`}>

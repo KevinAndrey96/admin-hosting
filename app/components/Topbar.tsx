@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useTheme } from '../hooks/useTheme';
 
 type HeaderDropdown = 'notifications' | 'emails' | 'user' | null;
@@ -215,10 +216,10 @@ export default function Topbar() {
               </li>
               <li role="separator" className="divider" />
               <li>
-                <a href="#" className="d-b td-n pY-5 bgcH-grey-100 c-grey-700">
+                <Link href="/signin" className="d-b td-n pY-5 bgcH-grey-100 c-grey-700">
                   <i className="ti-power-off mR-10" />
-                  <span>Logout</span>
-                </a>
+                  <span>Cerrar sesión</span>
+                </Link>
               </li>
             </ul>
           </li>
