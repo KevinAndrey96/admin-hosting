@@ -1,0 +1,189 @@
+// Adminator template - full styles (from Adminator src/assets/styles/index.scss)
+@use 'spec/settings/index' as *;
+@use 'spec/tools/index' as *;
+@use "bootstrap/scss/bootstrap" as *;
+@use 'spec/index' as *;
+@use 'vendor/index' as *;
+@import "utils/theme.css";
+@import "utils/mobile.scss";
+@import "vendor/themify-icons.css";
+
+body {
+  background: var(--c-bkg-body);
+  color: var(--c-text-base);
+}
+
+.sidebar {
+  background: var(--c-bkg-sidebar);
+}
+
+.bgc-white {
+  background: var(--c-bkg-card) !important;
+}
+
+// Dark-mode aware Header & Dropdown --------------------------------
+.header {
+  background: var(--c-bkg-card);
+  border-bottom: 1px solid var(--c-border);
+
+  .dropdown-menu {
+    background: var(--c-bkg-card);
+    border: 1px solid var(--c-border);
+  }
+
+  .nav-left > li > a,
+  .nav-right > li > a {
+    color: var(--c-text-base);
+
+    &:hover,
+    &:focus {
+      color: var(--c-primary);
+    }
+  }
+
+  .notifications .counter {
+    background: var(--c-danger);
+    color: #fff;
+  }
+
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    height: 65px;
+    padding: 0 15px;
+
+    .form-check {
+      margin: 0;
+      .form-check-label {
+        color: var(--c-text-muted);
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        i { font-size: 12px; }
+      }
+      .form-check-input {
+        width: 2.5rem;
+        height: 1.25rem;
+        background-color: var(--c-border);
+        border: 1px solid var(--c-border);
+        cursor: pointer;
+        &:checked {
+          background-color: var(--c-primary);
+          border-color: var(--c-primary);
+        }
+        &:focus {
+          box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--c-primary) 25%, transparent);
+          border-color: var(--c-primary);
+        }
+      }
+    }
+    @media (max-width: 991px) {
+      padding: 0 6px;
+      height: 65px;
+      .form-check {
+        .form-check-label { font-size: 10px; }
+        .form-check-input { width: 2rem; height: 1rem; }
+      }
+    }
+    @media (max-width: 480px) {
+      padding: 0 4px;
+      .form-check {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        .form-check-label { font-size: 8px; margin: 1px 0; white-space: nowrap; }
+        .form-check-input { width: 1.5rem; height: 0.8rem; margin: 2px 0; }
+      }
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .header .nav-right .dropdown-menu {
+    position: fixed !important;
+    top: 65px !important;
+    left: 5px !important;
+    right: 5px !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: auto !important;
+    transform: none !important;
+    z-index: 1050;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: calc(100vh - 85px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .header .search-input.active {
+    position: absolute;
+    top: 65px;
+    left: 0;
+    right: 0;
+    background: var(--c-bkg-card);
+    border-top: 1px solid var(--c-border);
+    padding: 10px;
+    z-index: 999;
+    input {
+      margin-top: 0;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--c-border);
+      border-radius: 4px;
+      background: var(--c-bkg-card);
+      color: var(--c-text-base);
+      &::placeholder { color: var(--c-text-muted); }
+    }
+  }
+}
+
+// Tables, Forms, Cards, etc (condensed from Adminator index)
+.table {
+  background: var(--c-bkg-card);
+  color: var(--c-text-base);
+  thead th, tfoot th { background: var(--c-bkg-card); color: var(--c-text-base); border-color: var(--c-border); }
+  tbody td, tbody th { border-color: var(--c-border); color: var(--c-text-base); background: var(--c-bkg-card); }
+  tbody tr:nth-child(even) td, tbody tr:nth-child(even) th { background: color-mix(in srgb, var(--c-bkg-card) 95%, var(--c-border)); }
+  &.table-hover tbody tr:hover td, &.table-hover tbody tr:hover th { background: color-mix(in srgb, var(--c-bkg-card) 90%, var(--c-border)) !important; color: var(--c-text-base); }
+  &.table-bordered { border: 1px solid var(--c-border); th, td { border: 1px solid var(--c-border); } }
+}
+
+.form-control, .form-select {
+  background: var(--c-bkg-card);
+  color: var(--c-text-base);
+  border: 1px solid var(--c-border);
+  &:focus { border-color: var(--c-primary); box-shadow: 0 0 0 0.1rem rgba(75, 124, 243, .25); }
+}
+input::placeholder { color: var(--c-text-muted); }
+
+.card, .bgc-white.bd, .bgc-white.bdT, .bgc-white.bdB {
+  background: var(--c-bkg-card);
+  border-color: var(--c-border) !important;
+  color: var(--c-text-base);
+}
+
+.alert {
+  color: var(--c-text-base);
+  border-color: var(--c-border);
+  background: color-mix(in srgb, var(--c-bkg-card) 85%, var(--c-border));
+  &.alert-primary { background: color-mix(in srgb, var(--c-primary) 20%, var(--c-bkg-card)); border-color: var(--c-primary); color: var(--c-primary); }
+}
+
+.modal-content { background: var(--c-bkg-card); color: var(--c-text-base); border: 1px solid var(--c-border); }
+.logo-text { color: var(--c-text-base); }
+.logo-auth { max-width: 60px !important; max-height: 60px !important; width: auto; height: auto; }
+.bd, .bdT, .bdB, .bdL, .bdR { border-color: var(--c-border) !important; }
+.sidebar-logo { border-color: var(--c-border) !important; }
+.bgc-grey-100 { background: color-mix(in srgb, var(--c-bkg-body) 90%, #000) !important; }
+.sales-report-header { background-color: var(--c-primary) !important; color: #ffffff !important; h5, h3, p { color: #ffffff !important; } }
+[data-theme="dark"] .bgcH-grey-100:hover { background: color-mix(in srgb, var(--c-bkg-card) 85%, var(--c-border)) !important; }
+.sidebar, .sidebar-menu { border-right: 1px solid var(--c-border); }
+[data-theme="dark"] .c-grey-900, [data-theme="dark"] .c-grey-800 { color: var(--c-text-base) !important; }
+[data-theme="dark"] .c-grey-700, [data-theme="dark"] .c-grey-600 { color: var(--c-text-muted) !important; }
+[data-theme="dark"] .text-dark { color: var(--c-text-base) !important; }
+h1, h2, h3, h4, h5, h6 { color: var(--c-text-base); }
+.table-responsive { border: 1px solid var(--c-border); border-radius: 3px; }
+.bgc-white .table { background: var(--c-bkg-card); border: none; thead th { border-top: none; } }

@@ -1,0 +1,234 @@
+@use '../settings/baseColors' as *;
+@use '../settings/breakpoints' as *;
+@use '../tools/mixins/mediaQueriesRanges' as *;
+
+// Chat page: fill viewport without page scroll, no footer overlap
+.chat-page {
+  height: calc(100vh - #{$header-height});
+  max-height: calc(100vh - #{$header-height});
+  overflow: hidden;
+}
+
+.chat-app {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  min-height: 0;
+  background: var(--c-bkg-card);
+
+  @include to($breakpoint-md) {
+    flex-direction: column;
+    position: relative;
+  }
+}
+
+#chat-sidebar {
+  width: 250px;
+  min-width: 250px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--c-border);
+  background: var(--c-bkg-card);
+  flex-shrink: 0;
+
+  > div:first-child {
+    flex-shrink: 0;
+  }
+  > div:last-child {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  @include to($breakpoint-md) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
+}
+
+#chat-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--c-bkg-body);
+}
+
+// Message rows: received (left) vs sent (right) - both with grey bubbles
+.chat-message-row {
+  display: flex;
+  align-items: flex-start;
+  max-width: 85%;
+
+  &.chat-message-sent {
+    margin-left: auto;
+  }
+}
+
+.chat-msg-avatar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  .chat-msg-time {
+    font-size: 11px;
+    color: var(--c-text-muted);
+    white-space: nowrap;
+  }
+}
+
+.chat-bubble {
+  max-width: 100%;
+  background: $grey-200 !important;
+  border: 1px solid $grey-300 !important;
+  color: var(--c-text-base) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .chat-bubble {
+  background: color-mix(in srgb, var(--c-bkg-card) 85%, var(--c-border)) !important;
+  border-color: var(--c-border) !important;
+}
+
+// Dark mode chat styles
+[data-theme="dark"] {
+  // Chat sidebar search input
+  input[name="chatSearch"] {
+    background: var(--c-bkg-card);
+    color: var(--c-text-base);
+    border-color: var(--c-border);
+
+    &::placeholder {
+      color: var(--c-text-muted);
+    }
+
+    &:focus {
+      background: var(--c-bkg-card);
+      border-color: var(--c-primary);
+      box-shadow: 0 0 0 0.2rem rgba(var(--c-primary-rgb), 0.25);
+    }
+  }
+
+  // Contact list items
+  .peers.bgc-white {
+    background: var(--c-bkg-card) !important;
+    border-color: var(--c-border) !important;
+
+    &:hover,
+    &.bgcH-grey-50:hover {
+      background: var(--c-bkg-hover) !important;
+    }
+
+    h6 {
+      color: var(--c-text-base);
+    }
+
+    small {
+      // Status colors remain as they are for visual indication
+      &.c-grey-500 {
+        color: var(--c-text-muted) !important;
+      }
+    }
+  }
+
+  // Chat header
+  .peers.bgc-white {
+    background: var(--c-bkg-card) !important;
+
+    h6 {
+      color: var(--c-text-base);
+    }
+
+    i {
+      color: var(--c-text-muted);
+    }
+
+    .c-grey-900 {
+      color: var(--c-text-base) !important;
+
+      &.cH-blue-500:hover {
+        color: var(--c-primary) !important;
+      }
+    }
+  }
+
+  // Chat background area
+  .bgc-grey-200 {
+    background: var(--c-bkg-body) !important;
+  }
+
+  .chat-messages-area {
+    background: var(--c-bkg-body) !important;
+  }
+
+  .bgc-grey-100 {
+    background: var(--c-bkg-body) !important;
+  }
+
+  // Chat messages
+  .pY-3.pX-10.bgc-white {
+    background: var(--c-bkg-card) !important;
+    color: var(--c-text-base);
+    border: 1px solid var(--c-border);
+
+    small {
+      color: var(--c-text-muted);
+    }
+
+    span {
+      color: var(--c-text-base);
+    }
+  }
+
+  // Chat input area
+  .bdT.bgc-white {
+    background: var(--c-bkg-card) !important;
+    border-color: var(--c-border) !important;
+
+    .form-control {
+      background: var(--c-bkg-body);
+      border-color: var(--c-border);
+      color: var(--c-text-base);
+
+      &::placeholder {
+        color: var(--c-text-muted);
+      }
+
+      &:focus {
+        background: var(--c-bkg-body);
+        border-color: var(--c-primary);
+        color: var(--c-text-base);
+        box-shadow: 0 0 0 0.2rem rgba(var(--c-primary-rgb), 0.25);
+      }
+    }
+
+    .btn-primary {
+      background: var(--c-primary);
+      border-color: var(--c-primary);
+
+      &:hover {
+        background: var(--c-primary-hover);
+        border-color: var(--c-primary-hover);
+      }
+
+      &:focus {
+        box-shadow: 0 0 0 0.2rem rgba(var(--c-primary-rgb), 0.25);
+      }
+    }
+  }
+}

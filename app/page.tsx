@@ -1,113 +1,315 @@
-import Image from 'next/image'
+'use client';
+
+import dynamic from 'next/dynamic';
+import AdminLayout from './components/AdminLayout';
+import AdminatorCharts from './components/AdminatorCharts';
+import MasonryInit from './components/MasonryInit';
+import MonthlyStatsChart from './components/charts/MonthlyStatsChart';
+import CircularProgress from './components/charts/CircularProgress';
+
+const WorldMapChart = dynamic(() => import('./components/charts/WorldMapChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="d-f ai-c jc-c h-100" style={{ minHeight: 300, background: 'var(--c-bkg-hover)' }}>
+      <span className="c-grey-600">Cargando mapa...</span>
+    </div>
+  ),
+});
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <AdminLayout>
+      <AdminatorCharts />
+      <MasonryInit />
+      <div className="row gap-20 masonry pos-r">
+        <div className="masonry-sizer col-md-6" />
+        <div className="masonry-item w-100">
+          <div className="row gap-20">
+            {/* KPI cards - Adminator structure with sparkline IDs for Chart.js */}
+            <div className="col-md-3">
+              <div className="layers bd bgc-white p-20">
+                <div className="layer w-100 mB-10">
+                  <h6 className="lh-1">Total Visits</h6>
+                </div>
+                <div className="layer w-100">
+                  <div className="peers ai-sb fxw-nw">
+                    <div className="peer peer-greed">
+                      <span id="sparklinedash" />
+                    </div>
+                    <div className="peer">
+                      <span className="d-ib lh-0 va-m fw-600 bdrs-10em pX-15 pY-15 bgc-green-50 c-green-500">+10%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="layers bd bgc-white p-20">
+                <div className="layer w-100 mB-10">
+                  <h6 className="lh-1">Total Page Views</h6>
+                </div>
+                <div className="layer w-100">
+                  <div className="peers ai-sb fxw-nw">
+                    <div className="peer peer-greed">
+                      <span id="sparklinedash2" />
+                    </div>
+                    <div className="peer">
+                      <span className="d-ib lh-0 va-m fw-600 bdrs-10em pX-15 pY-15 bgc-red-50 c-red-500">-7%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="layers bd bgc-white p-20">
+                <div className="layer w-100 mB-10">
+                  <h6 className="lh-1">Unique Visitor</h6>
+                </div>
+                <div className="layer w-100">
+                  <div className="peers ai-sb fxw-nw">
+                    <div className="peer peer-greed">
+                      <span id="sparklinedash3" />
+                    </div>
+                    <div className="peer">
+                      <span className="d-ib lh-0 va-m fw-600 bdrs-10em pX-15 pY-15 bgc-purple-50 c-purple-500">~12%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="layers bd bgc-white p-20">
+                <div className="layer w-100 mB-10">
+                  <h6 className="lh-1">Bounce Rate</h6>
+                </div>
+                <div className="layer w-100">
+                  <div className="peers ai-sb fxw-nw">
+                    <div className="peer peer-greed">
+                      <span id="sparklinedash4" />
+                    </div>
+                    <div className="peer">
+                      <span className="d-ib lh-0 va-m fw-600 bdrs-10em pX-15 pY-15 bgc-blue-50 c-blue-500">33%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="masonry-item col-12">
+          <div className="bd bgc-white">
+            <div className="peers fxw-nw@lg+ ai-s">
+              <div className="peer peer-greed w-70p@lg+ w-100@lg- p-20">
+                <div className="layers">
+                  <div className="layer w-100 mB-10">
+                    <h6 className="lh-1">Site Visits</h6>
+                  </div>
+                  <div className="layer w-100">
+                    <WorldMapChart />
+                  </div>
+                </div>
+              </div>
+              <div className="peer bdL p-20 w-30p@lg+ w-100p@lg-">
+                <div className="layers">
+                  <div className="layer w-100">
+                    <div className="layers">
+                      <div className="layer w-100">
+                        <h5 className="mB-5">100k</h5>
+                        <small className="fw-600 c-grey-700">Visitors From USA</small>
+                        <span className="pull-right c-grey-600 fsz-sm">50%</span>
+                        <div className="progress mT-10">
+                          <div className="progress-bar bgc-deep-purple-500" role="progressbar" style={{ width: '50%' }} />
+                        </div>
+                      </div>
+                      <div className="layer w-100 mT-15">
+                        <h5 className="mB-5">1M</h5>
+                        <small className="fw-600 c-grey-700">Visitors From Europe</small>
+                        <span className="pull-right c-grey-600 fsz-sm">80%</span>
+                        <div className="progress mT-10">
+                          <div className="progress-bar bgc-green-500" role="progressbar" style={{ width: '80%' }} />
+                        </div>
+                      </div>
+                      <div className="layer w-100 mT-15">
+                        <h5 className="mB-5">450k</h5>
+                        <small className="fw-600 c-grey-700">Visitors From Australia</small>
+                        <span className="pull-right c-grey-600 fsz-sm">40%</span>
+                        <div className="progress mT-10">
+                          <div className="progress-bar bgc-light-blue-500" role="progressbar" style={{ width: '40%' }} />
+                        </div>
+                      </div>
+                      <div className="layer w-100 mT-15">
+                        <h5 className="mB-5">1B</h5>
+                        <small className="fw-600 c-grey-700">Visitors From India</small>
+                        <span className="pull-right c-grey-600 fsz-sm">90%</span>
+                        <div className="progress mT-10">
+                          <div className="progress-bar bgc-blue-grey-500" role="progressbar" style={{ width: '90%' }} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="peers pT-20 mT-20 bdT fxw-nw@lg+ jc-sb ta-c gap-10">
+                      <CircularProgress percent={75} color="#f44336" label="New Users" />
+                      <CircularProgress percent={50} color="#2196f3" label="New Purchases" />
+                      <CircularProgress percent={90} color="#ff9800" label="Bounce Rate" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="masonry-item col-md-6">
+          <div className="bd bgc-white">
+            <div className="layers">
+              <div className="layer w-100 pX-20 pT-20">
+                <h6 className="lh-1">Monthly Stats</h6>
+              </div>
+              <div className="layer w-100 p-20">
+                <MonthlyStatsChart />
+              </div>
+              <div className="layer bdT p-20 w-100">
+                <div className="peers ai-c jc-c gapX-20">
+                  <div className="peer">
+                    <span className="fsz-def fw-600 mR-10 c-grey-800">54%</span>
+                    <small className="c-grey-500 fw-600">Sales Growth</small>
+                  </div>
+                  <div className="peer fw-600">
+                    <span className="fsz-def fw-600 mR-10 c-grey-800">$185K</span>
+                    <small className="c-grey-500 fw-600">Dec Sales</small>
+                  </div>
+                  <div className="peer fw-600">
+                    <span className="fsz-def fw-600 mR-10 c-grey-800">60%</span>
+                    <small className="c-grey-500 fw-600">Profit Growth</small>
+                  </div>
+                  <div className="peer fw-600">
+                    <span className="fsz-def fw-600 mR-10 c-grey-800">$72K</span>
+                    <small className="c-grey-500 fw-600">Dec Profit</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="masonry-item col-md-6">
+          <div className="bd bgc-white p-20">
+            <div className="layers">
+              <div className="layer w-100 mB-10">
+                <h6 className="lh-1">Todo List</h6>
+              </div>
+              <div className="layer w-100">
+                <ul className="list-task list-group">
+                  <li className="list-group-item bdw-0">
+                    <div className="checkbox checkbox-circle checkbox-info peers ai-c">
+                      <input type="checkbox" id="inputCall1" name="inputCheckboxesCall" className="peer" />
+                      <label htmlFor="inputCall1" className="form-label peers peer-greed js-sb ai-c">
+                        <span className="peer peer-greed">Call John for Dinner</span>
+                      </label>
+                    </div>
+                  </li>
+                  <li className="list-group-item bdw-0">
+                    <div className="checkbox checkbox-circle checkbox-info peers ai-c">
+                      <input type="checkbox" id="inputCall2" name="inputCheckboxesCall" className="peer" />
+                      <label htmlFor="inputCall2" className="form-label peers peer-greed js-sb ai-c">
+                        <span className="peer peer-greed">Book Boss Flight</span>
+                        <span className="peer">
+                          <span className="badge rounded-pill fl-r bg-success lh-0 p-10">2 Days</span>
+                        </span>
+                      </label>
+                    </div>
+                  </li>
+                  <li className="list-group-item bdw-0">
+                    <div className="checkbox checkbox-circle checkbox-info peers ai-c">
+                      <input type="checkbox" id="inputCall3" name="inputCheckboxesCall" className="peer" />
+                      <label htmlFor="inputCall3" className="form-label peers peer-greed js-sb ai-c">
+                        <span className="peer peer-greed">Hit the Gym</span>
+                        <span className="peer">
+                          <span className="badge rounded-pill fl-r bg-danger lh-0 p-10">3 Minutes</span>
+                        </span>
+                      </label>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="masonry-item col-md-6">
+          <div className="bd bgc-white">
+            <div className="layers">
+              <div className="layer w-100 p-20">
+                <h6 className="lh-1">Sales Report</h6>
+              </div>
+              <div className="layer w-100">
+                <div className="sales-report-header p-20">
+                  <div className="peers ai-c jc-sb gap-40">
+                    <div className="peer peer-greed">
+                      <h5>November 2025</h5>
+                      <p className="mB-0">Sales Report</p>
+                    </div>
+                    <div className="peer">
+                      <h3 className="text-end">$6,000</h3>
+                    </div>
+                  </div>
+                </div>
+                <div className="table-responsive p-20">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th className="bdwT-0">Name</th>
+                        <th className="bdwT-0">Status</th>
+                        <th className="bdwT-0">Date</th>
+                        <th className="bdwT-0">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="fw-600">Item #1 Name</td>
+                        <td><span className="badge bgc-red-50 c-red-700 p-10 lh-0 tt-c rounded-pill">Unavailable</span></td>
+                        <td>Nov 18</td>
+                        <td><span className="text-success">$12</span></td>
+                      </tr>
+                      <tr>
+                        <td className="fw-600">Item #2 Name</td>
+                        <td><span className="badge bgc-deep-purple-50 c-deep-purple-700 p-10 lh-0 tt-c rounded-pill">New</span></td>
+                        <td>Nov 19</td>
+                        <td><span className="text-info">$34</span></td>
+                      </tr>
+                      <tr>
+                        <td className="fw-600">Item #3 Name</td>
+                        <td><span className="badge bgc-green-50 c-green-700 p-10 lh-0 tt-c rounded-pill">Available</span></td>
+                        <td>Nov 20</td>
+                        <td><span className="text-success">$65</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div className="ta-c bdT w-100 p-20">
+              <a href="#">Check all the sales</a>
+            </div>
+          </div>
+        </div>
+
+        <div className="masonry-item col-md-6">
+          <div className="bd bgc-white p-20">
+            <div className="layers">
+              <div className="layer w-100 mB-20">
+                <h6 className="lh-1">Welcome to Admin Panel</h6>
+              </div>
+              <div className="layer w-100">
+                <p className="c-grey-600">
+                  Panel de administración con gráficos integrados usando Recharts.
+                  Los datos mostrados son de demostración.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    </AdminLayout>
+  );
 }
