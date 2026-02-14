@@ -297,7 +297,7 @@ export default function DomainsPage() {
                       </strong>
                       {availabilityResult.price != null && (
                         <span className="c-grey-700 d-b mB-10">
-                          Desde {availabilityResult.currency} {availabilityResult.price.toFixed(2)}/año
+                          Desde $ {Number(availabilityResult.price).toLocaleString('es-CO')}/año
                         </span>
                       )}
                       {availabilityResult.domain && (
@@ -442,7 +442,11 @@ export default function DomainsPage() {
                   <tbody>
                     {paginatedData.map((d) => (
                       <tr key={d.id}>
-                        <td className="fw-500 c-grey-900">{d.fqdn}</td>
+                        <td className="fw-500 c-grey-900">
+                            <Link href={`/domains/${d.id}/edit`} className="td-n c-grey-900 c-hover-primary">
+                              {d.fqdn}
+                            </Link>
+                          </td>
                         {user?.role === 'ADMIN' && (
                           <td className="c-grey-800">
                             <Link href={`/clients/${d.userID}/edit`} className="td-n c-grey-800">
@@ -454,7 +458,7 @@ export default function DomainsPage() {
                           <td className="c-grey-800">{d.registrarName}</td>
                         )}
                         <td className="c-grey-800 ta-e">
-                          {d.currency} {d.salePrice.toLocaleString()}
+                          $ {d.salePrice.toLocaleString('es-CO')}
                         </td>
                         <td className="c-grey-800">
                           {dayjs(d.nextBillingDate).format('DD/MM/YYYY')}
@@ -514,15 +518,6 @@ export default function DomainsPage() {
                         <td className="ta-e">
                           <div className="d-f gap-2 jc-e">
                             <Link
-                              href={`/pago?tipo=renovar-dominio&domainId=${encodeURIComponent(d.id)}`}
-                              className="btn btn-sm btn-success d-f ai-c gap-1"
-                              style={{ color: '#fff' }}
-                              title="Renovar ahora"
-                            >
-                              <i className="ti-wallet" />
-                              Renovar ahora
-                            </Link>
-                            <Link
                               href={`/domains/${d.id}/edit`}
                               className="btn btn-sm btn-primary"
                               style={{ color: '#fff' }}
@@ -530,6 +525,16 @@ export default function DomainsPage() {
                             >
                               <i className="ti-pencil" />
                             </Link>
+                            <a
+                              href={`https://dnschecker.org/#A/${encodeURIComponent(d.fqdn)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-info d-f ai-c jc-c"
+                              style={{ color: '#fff' }}
+                              title="Ver propagación DNS"
+                            >
+                              <i className="ti-world" />
+                            </a>
                             {user?.role === 'ADMIN' && (
                               <button
                                 type="button"
@@ -540,6 +545,14 @@ export default function DomainsPage() {
                                 <i className="ti-trash" />
                               </button>
                             )}
+                            <Link
+                              href={`/pago?tipo=renovar-dominio&domainId=${encodeURIComponent(d.id)}`}
+                              className="btn btn-sm btn-success d-f ai-c jc-c"
+                              style={{ color: '#fff' }}
+                              title="Renovar ahora"
+                            >
+                              <i className="ti-wallet" />
+                            </Link>
                           </div>
                         </td>
                       </tr>

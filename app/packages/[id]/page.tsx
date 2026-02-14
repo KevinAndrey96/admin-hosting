@@ -147,7 +147,7 @@ export default function PackageDetailPage() {
               </Link>
               <h4 className="m-0 mT-5 c-grey-900">{pkg.name}</h4>
               <p className="c-grey-700 fsz-sm mT-5">
-                {pkg.currency} {pkg.salePrice.toLocaleString()} · {pkg.hostingCount} hosting{pkg.hostingCount !== 1 ? 's' : ''} usando este paquete
+                $ {pkg.salePrice.toLocaleString('es-CO')} · {pkg.hostingCount} hosting{pkg.hostingCount !== 1 ? 's' : ''} usando este paquete
               </p>
             </div>
             <div className="d-f gap-2">
@@ -177,7 +177,7 @@ export default function PackageDetailPage() {
                 <tbody>
                   <tr>
                     <td className="c-grey-600" style={{ width: 180 }}>Precio</td>
-                    <td className="fw-500">{pkg.currency} {pkg.salePrice.toLocaleString()}</td>
+                    <td className="fw-500">$ {pkg.salePrice.toLocaleString('es-CO')}</td>
                   </tr>
                   <tr>
                     <td className="c-grey-600">Disco</td>

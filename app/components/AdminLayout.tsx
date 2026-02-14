@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { useSettings } from '../hooks/useSettings';
@@ -36,8 +37,11 @@ export default function AdminLayout({
           </div>
         </main>
         {!hideFooter && (
-          <footer className="bdT ta-c p-30 lh-0 fsz-sm c-grey-600">
+          <footer className="bdT ta-c p-30 fsz-sm c-grey-600 d-f ai-c jc-c fxw-w gap-2">
             <span>© {new Date().getFullYear()} {companyName}. Todos los derechos reservados.</span>
+            <Link href="/terminos-y-condiciones" className="c-grey-600 td-n c-hover-primary">
+              Términos y condiciones
+            </Link>
           </footer>
         )}
       </div>

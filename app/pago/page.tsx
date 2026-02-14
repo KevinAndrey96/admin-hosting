@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '../components/AdminLayout';
@@ -25,22 +25,39 @@ const PAYMENT_METHODS = [
   { id: 'breb', name: 'Bre-B', logo: 'breb.png', settingKey: 'breb_key' },
 ] as const;
 
-const SHOW_PAYMENT_METHOD_BOXES = false; // temporal: oculto para experimento
+const LOGO_SIZE = 56;
+
+function formatPrice(value: number): string {
+  return `$ ${value.toLocaleString('es-CO')}`;
+}
+
+function formatDate(isoDate: string): string {
+  const d = new Date(isoDate);
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function addOneYear(isoDate: string): string {
+  const d = new Date(isoDate);
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString();
+}
 
 function PagoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: sessionLoading } = useSession();
   const { settings } = useSettings();
-  const [pagoData, setPagoData] = useState<{ itemLabel: string; salePrice: number; currency: string } | null>(null);
+  const [pagoData, setPagoData] = useState<{ itemLabel: string; salePrice: number; currency: string; currentExpirationDate?: string } | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [errorData, setErrorData] = useState<string | null>(null);
-  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [sectionModal, setSectionModal] = useState<'sin-comision' | 'mercadopago' | null>(null);
   const [paymentModal, setPaymentModal] = useState<typeof PAYMENT_METHODS[number] | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardCenter, setCardCenter] = useState<{ x: number; y: number } | null>(null);
 
   const tipo = searchParams.get('tipo') || '';
   const packageId = searchParams.get('packageId') || '';
@@ -85,6 +102,7 @@ function PagoContent() {
             itemLabel: data.itemLabel ?? '',
             salePrice: Number(data.salePrice) || 0,
             currency: data.currency ?? 'COP',
+            currentExpirationDate: data.currentExpirationDate,
           });
         }
       })
@@ -151,6 +169,11 @@ function PagoContent() {
       formData.append('file', file);
       formData.append('metodo', paymentModal.id);
       formData.append('monto', String(basePrice));
+      formData.append('tipo', tipo);
+      formData.append('tipoLabel', TIPO_LABELS[tipo] || tipo);
+      formData.append('itemLabel', itemLabel || '');
+      if (hostingId) formData.append('hostingId', hostingId);
+      if (packageId) formData.append('packageId', packageId);
       const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
       const res = await fetch(`${basePath}/api/pago/comprobante`, {
         method: 'POST',
@@ -161,9 +184,13 @@ function PagoContent() {
       if (res.ok) {
         setUploadMessage({ type: 'success', text: data.message || 'Comprobante enviado correctamente.' });
         setFile(null);
+        const redirectPath = tipo.includes('hosting') ? '/hosting' : tipo.includes('dominio') ? '/domains' : null;
         setTimeout(() => {
           setPaymentModal(null);
           setUploadMessage(null);
+          if (redirectPath) {
+            router.push(redirectPath);
+          }
         }, 2500);
       } else {
         setUploadMessage({ type: 'error', text: data.error || 'Error al subir.' });
@@ -173,7 +200,7 @@ function PagoContent() {
     } finally {
       setUploading(false);
     }
-  }, [file, paymentModal, basePrice]);
+  }, [file, paymentModal, basePrice, tipo, itemLabel, hostingId, packageId, router]);
 
   const closeModal = useCallback(() => {
     if (!uploading) {
@@ -182,6 +209,29 @@ function PagoContent() {
       setUploadMessage(null);
     }
   }, [uploading]);
+
+  useEffect(() => {
+    if (sectionModal || paymentModal) {
+      const updateCenter = () => {
+        if (cardRef.current) {
+          const rect = cardRef.current.getBoundingClientRect();
+          setCardCenter({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+          });
+        }
+      };
+      updateCenter();
+      window.addEventListener('scroll', updateCenter, true);
+      window.addEventListener('resize', updateCenter);
+      return () => {
+        window.removeEventListener('scroll', updateCenter, true);
+        window.removeEventListener('resize', updateCenter);
+      };
+    } else {
+      setCardCenter(null);
+    }
+  }, [sectionModal, paymentModal]);
 
   if (sessionLoading || !user) {
     return null;
@@ -201,6 +251,7 @@ function PagoContent() {
             </Link>
 
             <div
+              ref={cardRef}
               className="bd bdrs-3 p-30 mB-20"
               style={{
                 boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
@@ -254,69 +305,53 @@ function PagoContent() {
                 <>
                   <div className="p-20 bdrs-3 mB-20" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
                     <p className="m-0 fsz-sm c-grey-600 mB-5">Monto base</p>
-                    <p className="m-0 fsz-2xl fw-700 c-grey-900">
-                      {currency} {basePrice.toLocaleString()}
+                    <p className="m-0 fsz-xl fw-600 c-grey-900">
+                      {formatPrice(basePrice)}
                     </p>
                   </div>
 
                   <h6 className="fw-600 c-grey-800 mB-15">Pagos sin comisión</h6>
                   <div
-                    className="p-20 bdrs-3 mB-20"
+                    role="button"
+                    tabIndex={0}
+                    className="p-20 bdrs-3 mB-20 cur-p"
                     style={{ backgroundColor: 'rgba(34, 197, 94, 0.06)', border: '1px solid rgba(34, 197, 94, 0.2)' }}
+                    onClick={() => setSectionModal('sin-comision')}
+                    onKeyDown={(e) => e.key === 'Enter' && setSectionModal('sin-comision')}
                   >
                     <div className="d-f fxd-c gap-3">
                       <div>
                         <p className="m-0 fw-600 c-grey-900">Pago sin comisión adicional</p>
-                        <p className="m-0 fsz-sm c-grey-600">Bancolombia, Daviplata, Nequi o Bre-B. Total: <strong className="fw-700 c-grey-900">{currency} {basePrice.toLocaleString()}</strong></p>
+                        <p className="m-0 fsz-sm c-grey-600">Bancolombia, Daviplata, Nequi o Bre-B. Total: <strong className="fw-700 c-grey-900">{formatPrice(basePrice)}</strong></p>
                       </div>
-                      {SHOW_PAYMENT_METHOD_BOXES && (
-                        !showPaymentMethods ? (
-                          <button
-                            type="button"
-                            className="btn btn-success align-self-start"
-                            style={{ color: '#fff' }}
-                            onClick={() => setShowPaymentMethods(true)}
-                          >
-                            Ver medios de pago
-                          </button>
-                        ) : (
-                          <div className="d-f gap-3 fxw-w">
-                            {PAYMENT_METHODS.map((pm) => (
-                              <button
-                                key={pm.id}
-                                type="button"
-                                className="btn btn-outline-secondary p-15 bdrs-3"
-                                style={{ border: '1px solid #dee2e6' }}
-                                onClick={() => setPaymentModal(pm)}
-                              >
-                                {pm.name}
-                              </button>
-                            ))}
-                          </div>
-                        )
-                      )}
                     </div>
                   </div>
 
                   <h6 className="fw-600 c-grey-800 mB-15">MercadoPago</h6>
                   <div
-                    className="d-f ai-c jc-sb p-20 bdrs-3 mB-20"
+                    role="button"
+                    tabIndex={0}
+                    className="d-f ai-c jc-sb p-20 bdrs-3 mB-20 cur-p"
                     style={{ backgroundColor: 'rgba(0, 123, 255, 0.06)', border: '1px solid rgba(0, 123, 255, 0.2)' }}
+                    onClick={() => setSectionModal('mercadopago')}
+                    onKeyDown={(e) => e.key === 'Enter' && setSectionModal('mercadopago')}
                   >
                     <div>
                       <p className="m-0 fw-600 c-grey-900">Incluye 5% de comisión por transacción</p>
-                      <p className="m-0 fsz-sm c-grey-600">A través de un link de pago. Total: <strong className="fw-700 c-grey-900">{currency} {Math.round(precioConMercadoPago).toLocaleString()}</strong></p>
+                      <p className="m-0 fsz-sm c-grey-600">A través de un link de pago. Total: <strong className="fw-700 c-grey-900">{formatPrice(Math.round(precioConMercadoPago))}</strong></p>
                     </div>
-                    {settings?.mercadopago_payment_link && (
-                      <a
-                        href={settings.mercadopago_payment_link.startsWith('http') ? settings.mercadopago_payment_link : `https://${settings.mercadopago_payment_link}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-primary"
-                        style={{ color: '#fff' }}
-                      >
-                        Pagar con MercadoPago
-                      </a>
+                  </div>
+
+                  <hr className="mB-0 mT-30" style={{ borderColor: '#cbd5e1', borderTopWidth: 1 }} />
+                  <div className="p-25 bdrs-3 mT-30" style={{ backgroundColor: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                    <p className="m-0 fsz-sm c-grey-700 mB-0">
+                      <i className="ti-info-alt mR-5" />
+                      Una vez confirmado el pago se procederá a la {tipo.includes('renovar') ? 'renovación' : 'activación'} del servicio.
+                    </p>
+                    {tipo.includes('renovar') && pagoData?.currentExpirationDate && (
+                      <p className="m-0 fsz-sm c-grey-700 mT-10">
+                        Se renovará por un año más. Fecha anterior de expiración: <strong>{formatDate(pagoData.currentExpirationDate)}</strong>. Nueva fecha de expiración: <strong>{formatDate(addOneYear(pagoData.currentExpirationDate))}</strong>.
+                      </p>
                     )}
                   </div>
                 </>
@@ -326,14 +361,140 @@ function PagoContent() {
         </div>
       </div>
 
+      {sectionModal && (
+        <div
+          className="modal fade show"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1055,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          tabIndex={-1}
+          role="dialog"
+          onClick={() => setSectionModal(null)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            style={
+              cardCenter
+                ? {
+                    position: 'fixed',
+                    left: cardCenter.x,
+                    top: cardCenter.y,
+                    transform: 'translate(-50%, -50%)',
+                    margin: 0,
+                  }
+                : undefined
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content">
+              <div className="modal-header d-f ai-c jc-sb">
+                <h5 className="modal-title m-0">
+                  {sectionModal === 'sin-comision' ? 'Pagos sin comisión' : 'MercadoPago'}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Cerrar"
+                  onClick={() => setSectionModal(null)}
+                />
+              </div>
+              <div className="modal-body">
+                {sectionModal === 'sin-comision' ? (
+                  <>
+                    <p className="fsz-sm c-grey-600 mB-15">Selecciona el medio de pago. Total: <strong className="fw-700 c-grey-900">{formatPrice(basePrice)}</strong></p>
+                    <div className="d-f gap-3 jc-c" style={{ flexWrap: 'nowrap' }}>
+                      {PAYMENT_METHODS.map((pm) => (
+                        <button
+                          key={pm.id}
+                          type="button"
+                          className="btn btn-outline-secondary p-15 bdrs-3 d-f fxd-c ai-c jc-c"
+                          style={{ minWidth: 100, border: '1px solid #dee2e6' }}
+                          onClick={() => {
+                            setSectionModal(null);
+                            setPaymentModal(pm);
+                          }}
+                        >
+                          <img
+                            src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/payment-methods/${pm.logo}`}
+                            alt={pm.name}
+                            width={LOGO_SIZE}
+                            height={LOGO_SIZE}
+                            style={{ objectFit: 'contain' }}
+                          />
+                          <span className="fsz-xs c-grey-700 mT-5 ta-c">{pm.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="fsz-sm c-grey-600 mB-15 ta-c">Total: <strong className="fw-700 c-grey-900">{formatPrice(Math.round(precioConMercadoPago))}</strong> (incluye 5% de comisión)</p>
+                    <div className="d-f ai-c jc-c gap-3 mB-15">
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/payment-methods/mercadopago.png`}
+                        alt="MercadoPago"
+                        width={LOGO_SIZE}
+                        height={LOGO_SIZE}
+                        style={{ objectFit: 'contain' }}
+                      />
+                      <span className="fw-600 c-grey-900">MercadoPago</span>
+                    </div>
+                    {settings?.mercadopago_payment_link && (
+                      <div className="ta-c">
+                        <a
+                          href={settings.mercadopago_payment_link.startsWith('http') ? settings.mercadopago_payment_link : `https://${settings.mercadopago_payment_link}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary"
+                          style={{ color: '#fff' }}
+                        >
+                          Pagar con MercadoPago
+                        </a>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {paymentModal && (
         <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          className="modal fade show"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1055,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
           tabIndex={-1}
           role="dialog"
         >
-          <div className="modal-dialog modal-dialog-centered">
+          <div
+            className="modal-dialog modal-dialog-centered"
+            style={
+              cardCenter
+                ? {
+                    position: 'fixed',
+                    left: cardCenter.x,
+                    top: cardCenter.y,
+                    transform: 'translate(-50%, -50%)',
+                    margin: 0,
+                  }
+                : undefined
+            }
+          >
             <div className="modal-content">
               <div className="modal-header d-f ai-c gap-2">
                 <h5 className="modal-title m-0">{paymentModal.name}</h5>
@@ -349,7 +510,7 @@ function PagoContent() {
                 <div className="p-15 bdrs-3 mB-15" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
                   <p className="m-0 fsz-sm c-grey-600 mB-5">Monto a pagar</p>
                   <p className="m-0 fsz-xl fw-700 c-grey-900">
-                    {currency} {basePrice.toLocaleString()}
+                    {formatPrice(basePrice)}
                   </p>
                 </div>
                 <p className="c-grey-800 mB-15">

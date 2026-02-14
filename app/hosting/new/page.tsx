@@ -193,7 +193,7 @@ export default function NewHostingPage() {
                     <option value="">Seleccionar paquete</option>
                     {packages.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — {p.currency} {p.salePrice.toLocaleString()}
+                        {p.name} — $ {p.salePrice.toLocaleString('es-CO')}
                       </option>
                     ))}
                   </select>

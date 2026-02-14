@@ -212,7 +212,7 @@ export default function PackagesPage() {
                           </Link>
                         </td>
                         <td className="c-grey-800 ta-e">
-                          {p.currency} {p.salePrice.toLocaleString()}
+                          $ {p.salePrice.toLocaleString('es-CO')}
                         </td>
                         <td className="c-grey-800 ta-e">{fmtMb(p.diskSpaceQuotaMb)}</td>
                         <td className="c-grey-800 ta-e">{fmtMb(p.bandwidthLimitMb)}</td>

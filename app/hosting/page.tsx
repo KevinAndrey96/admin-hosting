@@ -273,7 +273,7 @@ export default function HostingPage() {
                     <ul className="m-0 p-0" style={{ listStyle: 'none' }}>
                       <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                         <i className="ti-wallet c-grey-600" style={{ fontSize: 14 }} />
-                        {p.currency} {p.salePrice.toLocaleString()}/año
+                        $ {p.salePrice.toLocaleString('es-CO')}/año
                       </li>
                       <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                         <i className="ti-harddrive c-grey-600" style={{ fontSize: 14 }} />
@@ -536,7 +536,7 @@ export default function HostingPage() {
                           {fmtMb(h.diskSpaceQuotaMb ?? null)}
                         </td>
                         <td className="c-grey-800 ta-e">
-                          {h.currency} {h.salePrice.toLocaleString()}
+                          $ {h.salePrice.toLocaleString('es-CO')}
                         </td>
                         <td className="c-grey-800">
                           {dayjs(h.nextBillingDate).format('DD/MM/YYYY')}
@@ -685,7 +685,7 @@ export default function HostingPage() {
               <div className="modal-body">
                 <h6 className="fw-600 mB-10">Resumen del plan</h6>
                 <ul className="fsz-sm c-grey-700 mB-15" style={{ listStyle: 'disc', paddingLeft: 20 }}>
-                  <li>{contractModal.currency} {contractModal.salePrice.toLocaleString()}/año</li>
+                  <li>$ {contractModal.salePrice.toLocaleString('es-CO')}/año</li>
                   <li>{fmtMb(contractModal.diskSpaceQuotaMb)} disco · {fmtMb(contractModal.bandwidthLimitMb)} de banda</li>
                   <li>{fmtLimit(contractModal.maxEmailAccounts)} cuentas email</li>
                   <li>{contractModal.maxAddonDomains != null ? `${contractModal.maxAddonDomains.toLocaleString()} dominios adicionales` : 'Dominios ilimitados'}</li>
@@ -726,7 +726,7 @@ export default function HostingPage() {
                   </label>
                 </div>
                 <p className="fsz-sm c-grey-700 mB-10">
-                  Precio: <strong>{contractModal.currency} {contractModal.salePrice.toLocaleString()}/año</strong>. Al confirmar, serás redirigido a la pasarela de pago.
+                  Precio: <strong>$ {contractModal.salePrice.toLocaleString('es-CO')}/año</strong>. Al confirmar, serás redirigido a la pasarela de pago.
                 </p>
                 <div className="p-15 bdrs-3 mB-15" style={{ backgroundColor: 'rgba(32,201,151,0.12)', border: '1px solid rgba(32,201,151,0.3)' }}>
                   <p className="m-0 fsz-sm c-grey-800">
@@ -764,7 +764,7 @@ export default function HostingPage() {
                     try {
                       const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
                       const planSummary = [
-                        `${contractModal.currency} ${contractModal.salePrice.toLocaleString()}/año`,
+                        `$ ${contractModal.salePrice.toLocaleString('es-CO')}/año`,
                         `${fmtMb(contractModal.diskSpaceQuotaMb)} disco`,
                         `${fmtMb(contractModal.bandwidthLimitMb)} de banda`,
                         `${fmtLimit(contractModal.maxEmailAccounts)} cuentas email`,
@@ -841,19 +841,13 @@ export default function HostingPage() {
                 <p className="c-grey-800 fsz-md mB-15">
                   A continuación será redirigido al inicio de sesión de {redirectModal.title}.
                 </p>
-                <div className="ta-l mB-20 p-15 bdrs-3" style={{ backgroundColor: 'rgba(0,0,0,0.04)' }}>
-                  <p className="c-grey-800 fsz-sm mB-5 m-0">
-                    Correo: <strong className="c-grey-900">
-                      {redirectModal.hosting.username}@{redirectModal.hosting.domainFqdns?.[0] || 'tudominio.com'}
-                    </strong>
-                  </p>
-                  <p className="c-grey-800 fsz-sm m-0">
-                    Contraseña: <strong className="c-grey-900">tu contraseña de correo</strong>
-                  </p>
-                </div>
-                <p className="c-grey-600 fsz-xs mB-20 m-0">
-                  Puedes restablecer estas credenciales desde el cPanel cuando quieras.
-                </p>
+                {redirectModal.title === 'cPanel' && (
+                  <div className="ta-l mB-20 p-15 bdrs-3" style={{ backgroundColor: 'rgba(0,0,0,0.04)' }}>
+                    <p className="c-grey-800 fsz-sm m-0">
+                      Usuario: <strong className="c-grey-900">{redirectModal.hosting.username}</strong>
+                    </p>
+                  </div>
+                )}
                 <div className="d-f jc-c ai-c gap-2">
                   <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Cargando...</span>

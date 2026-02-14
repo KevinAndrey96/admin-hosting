@@ -84,14 +84,6 @@ export default function Sidebar() {
               <span className="title">Mi cuenta</span>
             </Link>
           </li>
-          <li className={`nav-item ${pathname === '/pago' ? 'actived' : ''}`}>
-            <Link href="/pago" className="sidebar-link">
-              <span className="icon-holder">
-                <i className="c-green-500 ti-wallet" />
-              </span>
-              <span className="title">Pago</span>
-            </Link>
-          </li>
           {user?.role === 'ADMIN' && (
             <li className={`nav-item ${pathname?.startsWith('/clients') ? 'actived' : ''}`}>
               <Link href="/clients" className="sidebar-link">

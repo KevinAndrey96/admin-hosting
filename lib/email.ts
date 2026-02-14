@@ -34,6 +34,7 @@ export async function sendEmail(options: {
   subject: string;
   html: string;
   from?: string;
+  attachments?: Array<{ filename: string; content: Buffer | string }>;
 }): Promise<{ ok: boolean; error?: string }> {
   const skipSend = process.env.EMAIL_SKIP_SEND === 'true' || process.env.EMAIL_SKIP_SEND === '1';
   const transporter = getTransporter();
@@ -44,6 +45,9 @@ export async function sendEmail(options: {
     console.warn(`[Email] ${reason}. Logging en consola.`);
     console.log('[Email] To:', options.to, 'Subject:', options.subject);
     console.log('[Email] Body (html):', options.html.slice(0, 300) + (options.html.length > 300 ? '...' : ''));
+    if (options.attachments?.length) {
+      console.log('[Email] Attachments:', options.attachments.map((a) => a.filename).join(', '));
+    }
     return { ok: true };
   }
 
@@ -53,6 +57,7 @@ export async function sendEmail(options: {
       to: options.to,
       subject: options.subject,
       html: options.html,
+      attachments: options.attachments,
     });
     return { ok: true };
   } catch (e) {

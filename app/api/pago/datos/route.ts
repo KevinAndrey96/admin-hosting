@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         itemLabel: hosting.hostingPackage.name,
         salePrice: Number(hosting.hostingPackage.salePrice),
         currency: hosting.hostingPackage.currency,
+        currentExpirationDate: hosting.nextBillingDate instanceof Date ? hosting.nextBillingDate.toISOString() : String(hosting.nextBillingDate ?? ''),
       });
     }
 
@@ -66,15 +67,19 @@ export async function GET(request: NextRequest) {
           id: domainId,
           ...(session.role !== 'ADMIN' ? { userID: session.userId } : {}),
         },
-        select: { fqdn: true, salePrice: true, currency: true },
+        select: { fqdn: true, salePrice: true, currency: true, nextBillingDate: true },
       });
       if (!domain) {
         return NextResponse.json({ error: 'Dominio no encontrado' }, { status: 404 });
       }
+      const currentExpiration = domain.nextBillingDate;
       return NextResponse.json({
         itemLabel: domain.fqdn,
         salePrice: Number(domain.salePrice),
         currency: domain.currency,
+        ...(tipo === 'renovar-dominio' && currentExpiration
+          ? { currentExpirationDate: currentExpiration instanceof Date ? currentExpiration.toISOString() : String(currentExpiration) }
+          : {}),
       });
     }
 
