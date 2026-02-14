@@ -4,10 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useSettings } from '@/app/hooks/useSettings';
 
 const MIN_PASSWORD_LENGTH = 8;
 
 export default function SignUpPage() {
+  const { logoUrl, companyName } = useSettings();
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -84,11 +86,12 @@ export default function SignUpPage() {
         <div className="ta-c mB-30">
           <Link href="/" className="td-n">
             <Image
-              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/logo.svg`}
-              alt="Adminator"
+              src={logoUrl}
+              alt={companyName}
               width={60}
               height={60}
               className="mB-15"
+              unoptimized
             />
           </Link>
           <h4 className="m-0">Registro</h4>

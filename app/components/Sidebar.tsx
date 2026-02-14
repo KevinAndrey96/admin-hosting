@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useSettings } from '@/app/hooks/useSettings';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { logoUrl, companyName } = useSettings();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,21 +39,15 @@ export default function Sidebar() {
           <div className="peers ai-c fxw-nw">
             <div className="peer peer-greed">
               <Link href="/dashboard" className="sidebar-link td-n">
-                <div className="peers ai-c fxw-nw">
-                  <div className="peer">
-                    <div className="logo">
-                      <Image
-                        src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/logo.svg`}
-                        alt="Adminator"
-                        width={42}
-                        height={42}
-                        style={{ display: 'block', margin: '11px auto' }}
-                      />
-                    </div>
-                  </div>
-                  <div className="peer peer-greed">
-                    <h5 className="lh-1 mB-0 logo-text">Adminator</h5>
-                  </div>
+                <div className="logo">
+                  <Image
+                    src={logoUrl}
+                    alt={companyName}
+                    width={42}
+                    height={42}
+                    style={{ display: 'block', margin: '11px auto' }}
+                    unoptimized
+                  />
                 </div>
               </Link>
             </div>
@@ -72,6 +68,14 @@ export default function Sidebar() {
                 <i className="c-blue-500 ti-home" />
               </span>
               <span className="title">Dashboard</span>
+            </Link>
+          </li>
+          <li className={`nav-item ${pathname === '/settings' ? 'actived' : ''}`}>
+            <Link href="/settings" className="sidebar-link">
+              <span className="icon-holder">
+                <i className="c-teal-500 ti-settings" />
+              </span>
+              <span className="title">Configuración</span>
             </Link>
           </li>
           <li className="nav-item">

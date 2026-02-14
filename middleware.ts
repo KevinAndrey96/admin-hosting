@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const PROTECTED_PATHS = [
   '/dashboard',
+  '/settings',
   '/email',
   '/compose',
   '/calendar',

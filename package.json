@@ -11,7 +11,8 @@
     "start": "node start-server.js",
     "lint": "next lint",
     "db:generate": "npx prisma generate",
-    "db:push": "npx prisma db push",
+    "db:push": "npx prisma db push && npx prisma db seed",
+    "db:seed": "npx tsx prisma/seed.ts",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio"
   },
@@ -50,6 +51,7 @@
     "prisma": "^7",
     "sass": "^1.97.3",
     "tailwindcss": "^3",
+    "tsx": "^4",
     "typescript": "^5"
   }
 }
