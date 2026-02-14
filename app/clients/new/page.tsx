@@ -13,6 +13,9 @@ export default function NewClientPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [address, setAddress] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [status, setStatus] = useState('ENABLED');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
@@ -39,6 +42,9 @@ export default function NewClientPage() {
           fullName,
           email,
           phone: phone || undefined,
+          companyName: companyName || undefined,
+          address: address || undefined,
+          zipCode: zipCode || undefined,
           status,
           password: password || undefined,
         }),
@@ -128,6 +134,48 @@ export default function NewClientPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Ej: 3100000000"
+                  disabled={saving}
+                />
+              </div>
+              <div className="mb-3">
+                <label htmlFor="companyName" className="form-label fw-500">
+                  Razón social
+                </label>
+                <input
+                  type="text"
+                  className="form-control form-control-lg"
+                  id="companyName"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Ej: Empresa SAS"
+                  disabled={saving}
+                />
+              </div>
+              <div className="mb-3">
+                <label htmlFor="address" className="form-label fw-500">
+                  Dirección
+                </label>
+                <input
+                  type="text"
+                  className="form-control form-control-lg"
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Ej: Calle 123 # 45-67"
+                  disabled={saving}
+                />
+              </div>
+              <div className="mb-3">
+                <label htmlFor="zipCode" className="form-label fw-500">
+                  Código postal
+                </label>
+                <input
+                  type="text"
+                  className="form-control form-control-lg"
+                  id="zipCode"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  placeholder="Ej: 111156"
                   disabled={saving}
                 />
               </div>

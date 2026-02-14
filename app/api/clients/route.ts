@@ -25,25 +25,24 @@ export async function GET() {
 
     const users = await prisma.user.findMany({
       include: {
-        clientProfile: {
-          include: {
-            _count: { select: { domains: true, hosting: true } },
-          },
-        },
+        _count: { select: { domains: true, hosting: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
 
     const list = users.map((u) => ({
-      id: u.clientProfile?.id ?? u.id,
+      id: u.id,
       userID: u.id,
       role: u.role,
       fullName: u.fullName,
       email: u.email,
       phone: u.phone,
+      companyName: u.companyName,
+      address: u.address,
+      zipCode: u.zipCode,
       status: u.status,
-      domainsCount: u.clientProfile?._count?.domains ?? 0,
-      hostingCount: u.clientProfile?._count?.hosting ?? 0,
+      domainsCount: u._count.domains,
+      hostingCount: u._count.hosting,
       createdAt: u.createdAt,
     }));
 
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { fullName, email, phone, status, password } = body;
+    const { fullName, email, phone, companyName, address, zipCode, status, password } = body;
 
     if (!fullName?.trim()) {
       return NextResponse.json(
@@ -120,23 +119,25 @@ export async function POST(request: NextRequest) {
         fullName: fullName.trim(),
         email: normalizedEmail,
         phone: phone?.trim() || null,
+        companyName: companyName?.trim() || null,
+        address: address?.trim() || null,
+        zipCode: zipCode?.trim() || null,
         password: hashedPassword,
         role: 'CLIENT',
         status: userStatus,
       },
     });
 
-    const clientProfile = await prisma.clientProfile.create({
-      data: { userID: user.id },
-    });
-
     return NextResponse.json(
       {
-        id: clientProfile.id,
+        id: user.id,
         userID: user.id,
         fullName: user.fullName,
         email: user.email,
         phone: user.phone,
+        companyName: user.companyName,
+        address: user.address,
+        zipCode: user.zipCode,
         message: 'Cliente creado. Puede usar "¿Olvidaste tu contraseña?" para definir su contraseña.',
       },
       { status: 201 }

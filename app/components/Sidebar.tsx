@@ -90,6 +90,14 @@ export default function Sidebar() {
                   <span className="title">Clientes</span>
                 </Link>
               </li>
+              <li className={`nav-item ${pathname?.startsWith('/domains') ? 'actived' : ''}`}>
+                <Link href="/domains" className="sidebar-link">
+                  <span className="icon-holder">
+                    <i className="c-cyan-500 ti-world" />
+                  </span>
+                  <span className="title">Dominios</span>
+                </Link>
+              </li>
               <li className={`nav-item ${pathname === '/settings' ? 'actived' : ''}`}>
                 <Link href="/settings" className="sidebar-link">
                   <span className="icon-holder">

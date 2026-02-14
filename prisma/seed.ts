@@ -1,82 +1,116 @@
 /**
- * Prisma Seed - Initial data
+ * Prisma Seed - Initial data from JSON files
  * Run: npm run db:seed (or automatic with db:reset)
+ * Users and domains use explicit IDs for cross-reference.
  */
+import 'dotenv/config';
+import * as path from 'path';
+import * as fs from 'fs';
 import bcrypt from 'bcryptjs';
-import { ensureDefaultSettings } from '../lib/settings';
 import { prisma } from '../lib/prisma';
 
 const SALT_ROUNDS = 10;
+const DATA_DIR = path.join(__dirname, 'data');
 
-const defaultUsers = [
-  {
-    fullName: 'Default Admin',
-    email: 'admin@hotmail.com',
-    phone: '3100000001',
-    password: 'Admin2026@',
-    role: 'ADMIN' as const,
-    status: 'ENABLED' as const,
-  },
-  {
-    fullName: 'Default Client',
-    email: 'client@hotmail.com',
-    phone: '3100000000',
-    password: 'Client2026@',
-    role: 'CLIENT' as const,
-    status: 'ENABLED' as const,
-  },
-];
+function loadJson<T>(filename: string): T {
+  const filePath = path.join(DATA_DIR, filename);
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(raw) as T;
+}
 
 async function main() {
-  await ensureDefaultSettings();
-  console.log('Settings seed completed (company_name, logo_url, primary_color, secondary_color).');
+  // Settings
+  const settings = loadJson<Record<string, string>>('settings.json');
+  for (const [key, value] of Object.entries(settings)) {
+    const existing = await prisma.setting.findUnique({ where: { key } });
+    if (!existing) {
+      await prisma.setting.create({ data: { key, value } });
+    }
+  }
+  console.log('Settings seed completed.');
 
-  for (const u of defaultUsers) {
+  // Users (with explicit IDs for cross-reference)
+  const users = loadJson<Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    phone?: string | null;
+    companyName?: string | null;
+    address?: string | null;
+    zipCode?: string | null;
+    password: string;
+    role: 'ADMIN' | 'CLIENT';
+    status: 'ENABLED' | 'DISABLED';
+  }>>('users.json');
+
+  for (const u of users) {
     const hashedPassword = await bcrypt.hash(u.password, SALT_ROUNDS);
-    const user = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: u.email },
       create: {
+        id: u.id,
         fullName: u.fullName,
         email: u.email,
-        phone: u.phone,
+        phone: u.phone ?? null,
+        companyName: u.companyName ?? null,
+        address: u.address ?? null,
+        zipCode: u.zipCode ?? null,
         password: hashedPassword,
         role: u.role,
         status: u.status,
       },
       update: {
         fullName: u.fullName,
-        phone: u.phone,
+        phone: u.phone ?? null,
+        companyName: u.companyName ?? null,
+        address: u.address ?? null,
+        zipCode: u.zipCode ?? null,
         password: hashedPassword,
         role: u.role,
         status: u.status,
       },
     });
     console.log(`User seeded: ${u.email} (${u.role})`);
+  }
 
-    if (u.role === 'CLIENT') {
-      await prisma.clientProfile.upsert({
-        where: { userID: user.id },
-        create: { userID: user.id },
-        update: {},
+  // Domains (reference userID from users)
+  const domains = loadJson<Array<{
+    userID: string;
+    registrarName: string;
+    fqdn: string;
+    salePrice: number;
+    currency?: string;
+    renewalDate: string;
+    paymentStatus?: string;
+    serviceStatus?: string;
+    transferLock?: boolean;
+  }>>('domains.json');
+
+  for (const d of domains) {
+    const renewal = new Date(d.renewalDate);
+    const existing = await prisma.domain.findFirst({
+      where: { fqdn: d.fqdn.toLowerCase(), userID: d.userID },
+    });
+    if (!existing) {
+      await prisma.domain.create({
+        data: {
+          userID: d.userID,
+          registrarName: d.registrarName,
+          fqdn: d.fqdn.toLowerCase(),
+          salePrice: d.salePrice,
+          currency: d.currency || 'COP',
+          renewalDate: renewal,
+          nextBillingDate: renewal,
+          paymentStatus: (d.paymentStatus as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED') || 'PENDING',
+          serviceStatus: (d.serviceStatus as 'ACTIVE' | 'AT_RISK' | 'EXPIRED') || 'ACTIVE',
+          transferLock: d.transferLock !== false,
+        },
       });
-      console.log(`ClientProfile seeded for ${u.email}`);
+      console.log(`Domain seeded: ${d.fqdn} (user: ${d.userID})`);
     }
   }
 
-  const existingRegistrar = await prisma.registrar.findFirst({
-    where: { name: 'Registrador por defecto' },
-  });
-  if (!existingRegistrar) {
-    await prisma.registrar.create({
-      data: {
-        name: 'Registrador por defecto',
-        notes: 'Registrador de ejemplo',
-      },
-    });
-    console.log('Default registrar seeded.');
-  }
-
-  console.log('Default users seed completed.');
+  console.log('Seed completed.');
 }
 
 main()

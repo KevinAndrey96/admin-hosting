@@ -5,63 +5,55 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '../components/AdminLayout';
 import { useSession } from '../hooks/useSession';
+import dayjs from 'dayjs';
 
-type Client = {
+type Domain = {
   id: string;
-  userID?: string;
-  role: string;
-  fullName: string;
-  email: string;
-  phone: string | null;
-  companyName: string | null;
-  address: string | null;
-  zipCode: string | null;
-  status: string;
-  domainsCount: number;
-  hostingCount: number;
+  userID: string;
+  clientName: string;
+  clientEmail: string;
+  registrarName: string;
+  fqdn: string;
+  salePrice: number;
+  currency: string;
+  billingCycle: string;
+  renewalDate: string;
+  nextBillingDate: string;
+  paymentStatus: string;
+  serviceStatus: string;
+  transferLock: boolean;
+  healthStatus: string;
   createdAt: string;
 };
 
-type SortKey = 'fullName' | 'companyName' | 'email' | 'phone' | 'role' | 'domainsCount' | 'hostingCount' | 'status' | '';
+type SortKey = 'fqdn' | 'clientName' | 'registrarName' | 'salePrice' | 'paymentStatus' | 'serviceStatus' | 'nextBillingDate' | '';
 type SortDir = 'asc' | 'desc';
 
-export default function ClientsPage() {
+const PAYMENT_LABELS: Record<string, string> = {
+  PENDING: 'Pendiente',
+  PAID: 'Pagado',
+  OVERDUE: 'Vencido',
+  CANCELLED: 'Cancelado',
+};
+
+const SERVICE_LABELS: Record<string, string> = {
+  ACTIVE: 'Activo',
+  AT_RISK: 'En riesgo',
+  EXPIRED: 'Expirado',
+};
+
+export default function DomainsPage() {
   const router = useRouter();
   const { user, loading: sessionLoading } = useSession();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortKey, setSortKey] = useState<SortKey>('');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [deleteModal, setDeleteModal] = useState<Client | null>(null);
+  const [deleteModal, setDeleteModal] = useState<Domain | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
-
-  const handleStatusToggle = async (client: Client) => {
-    if (client.id === user?.id) return;
-    const newStatus = client.status === 'ENABLED' ? 'DISABLED' : 'ENABLED';
-    setTogglingStatusId(client.id);
-    try {
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-      const res = await fetch(`${basePath}/api/clients/${client.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        setClients((prev) =>
-          prev.map((c) => (c.id === client.id ? { ...c, status: newStatus } : c))
-        );
-      }
-    } catch {
-      // Silently fail or could show toast
-    } finally {
-      setTogglingStatusId(null);
-    }
-  };
 
   useEffect(() => {
     if (!sessionLoading && user?.role !== 'ADMIN') {
@@ -70,51 +62,53 @@ export default function ClientsPage() {
   }, [router, sessionLoading, user?.role]);
 
   useEffect(() => {
-    const fetchClients = async () => {
+    const fetchDomains = async () => {
       try {
         const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-        const res = await fetch(`${basePath}/api/clients`, { credentials: 'include' });
+        const res = await fetch(`${basePath}/api/domains`, { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
-          setClients(data.filter((c: Client) => c.role === 'CLIENT'));
+          setDomains(data);
         }
       } catch {
-        setClients([]);
+        setDomains([]);
       } finally {
         setLoading(false);
       }
     };
 
     if (user?.role === 'ADMIN') {
-      fetchClients();
+      fetchDomains();
     }
   }, [user?.role]);
 
   const filteredData = useMemo(() => {
-    if (!search.trim()) return clients;
+    if (!search.trim()) return domains;
     const q = search.toLowerCase();
-    return clients.filter(
-      (c) =>
-        c.fullName.toLowerCase().includes(q) ||
-        (c.companyName && c.companyName.toLowerCase().includes(q)) ||
-        c.email.toLowerCase().includes(q) ||
-        (c.phone && c.phone.includes(q)) ||
-        (c.address && c.address.toLowerCase().includes(q)) ||
-        (c.zipCode && c.zipCode.includes(q)) ||
-        c.role.toLowerCase().includes(q) ||
-        c.status.toLowerCase().includes(q)
+    return domains.filter(
+      (d) =>
+        d.fqdn.toLowerCase().includes(q) ||
+        d.clientName.toLowerCase().includes(q) ||
+        d.clientEmail.toLowerCase().includes(q) ||
+        d.registrarName.toLowerCase().includes(q) ||
+        (PAYMENT_LABELS[d.paymentStatus]?.toLowerCase().includes(q)) ||
+        (SERVICE_LABELS[d.serviceStatus]?.toLowerCase().includes(q))
     );
-  }, [clients, search]);
+  }, [domains, search]);
 
   const sortedData = useMemo(() => {
     if (!sortKey) return filteredData;
     return [...filteredData].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
-      const cmp =
-        typeof aVal === 'number' && typeof bVal === 'number'
-          ? aVal - bVal
-          : String(aVal ?? '').localeCompare(String(bVal ?? ''));
+      let cmp: number;
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        cmp = aVal - bVal;
+      } else if (typeof aVal === 'string' && typeof bVal === 'string' && /^\d{4}/.test(aVal) && /^\d{4}/.test(bVal)) {
+        cmp = new Date(aVal as string).getTime() - new Date(bVal as string).getTime();
+      } else {
+        cmp = String(aVal ?? '').localeCompare(String(bVal ?? ''));
+      }
       return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [filteredData, sortKey, sortDir]);
@@ -130,13 +124,13 @@ export default function ClientsPage() {
     setDeleting(true);
     try {
       const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-      const res = await fetch(`${basePath}/api/clients/${deleteModal.id}`, {
+      const res = await fetch(`${basePath}/api/domains/${deleteModal.id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setClients((prev) => prev.filter((c) => c.id !== deleteModal.id));
+        setDomains((prev) => prev.filter((d) => d.id !== deleteModal.id));
         setDeleteModal(null);
       } else {
         alert(data.error || 'Error al eliminar');
@@ -177,12 +171,12 @@ export default function ClientsPage() {
         <div className="row mB-20">
           <div className="col-12 d-f jc-sb ai-c">
             <div>
-              <h4 className="m-0 c-grey-900">Clientes</h4>
-              <p className="c-grey-700 fsz-sm mT-5">Gestiona los usuarios de tu negocio</p>
+              <h4 className="m-0 c-grey-900">Dominios</h4>
+              <p className="c-grey-700 fsz-sm mT-5">Gestiona los dominios de tus clientes</p>
             </div>
-            <Link href="/clients/new" className="btn btn-primary">
+            <Link href="/domains/new" className="btn btn-primary">
               <i className="ti-plus mR-5" />
-              Nuevo cliente
+              Nuevo dominio
             </Link>
           </div>
         </div>
@@ -190,11 +184,11 @@ export default function ClientsPage() {
         <div className="bd bgc-white bdrs-3 p-20" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
           {loading ? (
             <div className="p-20 ta-c c-grey-700">Cargando...</div>
-          ) : clients.length === 0 ? (
+          ) : domains.length === 0 ? (
             <div className="p-40 ta-c c-grey-700">
-              <p className="mB-10">No hay usuarios registrados.</p>
-              <Link href="/clients/new" className="btn btn-primary">
-                Crear primer cliente
+              <p className="mB-10">No hay dominios registrados.</p>
+              <Link href="/domains/new" className="btn btn-primary">
+                Crear primer dominio
               </Link>
             </div>
           ) : (
@@ -236,64 +230,64 @@ export default function ClientsPage() {
               </div>
 
               <div className="table-responsive">
-                <table className="table table-striped table-hover table-bordered" id="clientsDataTable">
+                <table className="table table-striped table-hover table-bordered">
                   <thead>
                     <tr>
                       <th
                         className="c-grey-800 cur-p"
-                        style={{ minWidth: 140 }}
-                        onClick={() => handleSort('fullName')}
+                        style={{ minWidth: 160 }}
+                        onClick={() => handleSort('fqdn')}
                       >
-                        Nombre
-                        <SortIcon col="fullName" />
+                        Dominio
+                        <SortIcon col="fqdn" />
                       </th>
                       <th
                         className="c-grey-800 cur-p"
                         style={{ minWidth: 140 }}
-                        onClick={() => handleSort('companyName')}
+                        onClick={() => handleSort('clientName')}
                       >
-                        Razón social
-                        <SortIcon col="companyName" />
+                        Cliente
+                        <SortIcon col="clientName" />
                       </th>
                       <th
                         className="c-grey-800 cur-p"
-                        style={{ minWidth: 180 }}
-                        onClick={() => handleSort('email')}
+                        style={{ minWidth: 120 }}
+                        onClick={() => handleSort('registrarName')}
                       >
-                        Correo
-                        <SortIcon col="email" />
+                        Registrador
+                        <SortIcon col="registrarName" />
+                      </th>
+                      <th
+                        className="c-grey-800 cur-p ta-e"
+                        style={{ minWidth: 90 }}
+                        onClick={() => handleSort('salePrice')}
+                      >
+                        Precio
+                        <SortIcon col="salePrice" />
                       </th>
                       <th
                         className="c-grey-800 cur-p"
-                        style={{ minWidth: 110 }}
-                        onClick={() => handleSort('phone')}
+                        style={{ minWidth: 100 }}
+                        onClick={() => handleSort('nextBillingDate')}
                       >
-                        Teléfono
-                        <SortIcon col="phone" />
-                      </th>
-                      <th className="c-grey-800 cur-p" style={{ minWidth: 90 }} onClick={() => handleSort('role')}>
-                        Rol
-                        <SortIcon col="role" />
+                        Próx. facturación
+                        <SortIcon col="nextBillingDate" />
                       </th>
                       <th
-                        className="c-grey-800 cur-p ta-c"
-                        style={{ minWidth: 80 }}
-                        onClick={() => handleSort('domainsCount')}
+                        className="c-grey-800 cur-p"
+                        style={{ minWidth: 100 }}
+                        onClick={() => handleSort('paymentStatus')}
                       >
-                        Dominios
-                        <SortIcon col="domainsCount" />
+                        Pago
+                        <SortIcon col="paymentStatus" />
                       </th>
                       <th
-                        className="c-grey-800 cur-p ta-c"
-                        style={{ minWidth: 80 }}
-                        onClick={() => handleSort('hostingCount')}
+                        className="c-grey-800 cur-p"
+                        style={{ minWidth: 90 }}
+                        onClick={() => handleSort('serviceStatus')}
                       >
-                        Hosting
-                        <SortIcon col="hostingCount" />
-                      </th>
-                      <th className="c-grey-800 cur-p" style={{ minWidth: 100 }} onClick={() => handleSort('status')}>
-                        Estado
-                        <SortIcon col="status" />
+                        Servicio
+                        <SortIcon col="serviceStatus" />
                       </th>
                       <th className="ta-e c-grey-800" style={{ minWidth: 90 }}>
                         Acciones
@@ -301,79 +295,73 @@ export default function ClientsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedData.map((c) => (
-                      <tr key={c.id}>
-                        <td className="fw-500 c-grey-900">{c.fullName}</td>
-                        <td className="c-grey-800">{c.companyName || '—'}</td>
-                        <td className="c-grey-800">{c.email}</td>
-                        <td className="c-grey-800">{c.phone || '—'}</td>
+                    {paginatedData.map((d) => (
+                      <tr key={d.id}>
+                        <td className="fw-500 c-grey-900">{d.fqdn}</td>
+                        <td className="c-grey-800">
+                          <Link href={`/clients/${d.userID}/edit`} className="td-n c-grey-800">
+                            {d.clientName}
+                          </Link>
+                        </td>
+                        <td className="c-grey-800">{d.registrarName}</td>
+                        <td className="c-grey-800 ta-e">
+                          {d.currency} {d.salePrice.toLocaleString()}
+                        </td>
+                        <td className="c-grey-800">
+                          {dayjs(d.nextBillingDate).format('DD/MM/YYYY')}
+                        </td>
                         <td>
                           <span
                             className="badge rounded-pill fsz-xs"
                             style={{
-                              backgroundColor: c.role === 'ADMIN' ? '#dc3545' : '#20c997',
+                              backgroundColor:
+                                d.paymentStatus === 'PAID'
+                                  ? '#20c997'
+                                  : d.paymentStatus === 'OVERDUE'
+                                    ? '#dc3545'
+                                    : d.paymentStatus === 'CANCELLED'
+                                      ? '#6c757d'
+                                      : '#ffc107',
+                              color: d.paymentStatus === 'PENDING' ? '#000' : '#fff',
+                            }}
+                          >
+                            {PAYMENT_LABELS[d.paymentStatus] ?? d.paymentStatus}
+                          </span>
+                        </td>
+                        <td>
+                          <span
+                            className="badge rounded-pill fsz-xs"
+                            style={{
+                              backgroundColor:
+                                d.serviceStatus === 'ACTIVE'
+                                  ? '#20c997'
+                                  : d.serviceStatus === 'AT_RISK'
+                                    ? '#fd7e14'
+                                    : '#dc3545',
                               color: '#fff',
                             }}
                           >
-                            {c.role === 'ADMIN' ? 'Admin' : 'Cliente'}
+                            {SERVICE_LABELS[d.serviceStatus] ?? d.serviceStatus}
                           </span>
-                        </td>
-                        <td className="c-grey-800 ta-c">{c.domainsCount}</td>
-                        <td className="c-grey-800 ta-c">{c.hostingCount}</td>
-                        <td>
-                          <div
-                            className="form-check form-switch d-f ai-c gap-2"
-                            style={{ margin: 0, minHeight: 24 }}
-                          >
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              id={`status-${c.id}`}
-                              checked={c.status === 'ENABLED'}
-                              onChange={() => handleStatusToggle(c)}
-                              disabled={
-                                togglingStatusId === c.id || c.userID === user?.id
-                              }
-                              title={
-                                c.userID === user?.id
-                                  ? 'No puedes cambiar tu propio estado'
-                                  : c.status === 'ENABLED'
-                                    ? 'Deshabilitar'
-                                    : 'Habilitar'
-                              }
-                            />
-                            <label
-                              className="form-check-label fsz-sm c-grey-700 m-0"
-                              htmlFor={`status-${c.id}`}
-                            >
-                              {togglingStatusId === c.id
-                                ? 'Actualizando...'
-                                : c.status === 'ENABLED'
-                                  ? 'Habilitado'
-                                  : 'Deshabilitado'}
-                            </label>
-                          </div>
                         </td>
                         <td className="ta-e">
                           <div className="d-f gap-2 jc-e">
                             <Link
-                              href={`/clients/${c.id}/edit`}
+                              href={`/domains/${d.id}/edit`}
                               className="btn btn-sm btn-primary"
                               style={{ color: '#fff' }}
                               title="Editar"
                             >
                               <i className="ti-pencil" />
                             </Link>
-                            {c.userID !== user?.id && (
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => setDeleteModal(c)}
-                                title="Eliminar"
-                              >
-                                <i className="ti-trash" />
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => setDeleteModal(d)}
+                              title="Eliminar"
+                            >
+                              <i className="ti-trash" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -435,7 +423,7 @@ export default function ClientsPage() {
               </div>
               <div className="modal-body">
                 <p className="m-0">
-                  ¿Estás seguro de que deseas eliminar a <strong>{deleteModal.fullName}</strong> ({deleteModal.email})?
+                  ¿Estás seguro de que deseas eliminar el dominio <strong>{deleteModal.fqdn}</strong>?
                   Esta acción no se puede deshacer.
                 </p>
               </div>

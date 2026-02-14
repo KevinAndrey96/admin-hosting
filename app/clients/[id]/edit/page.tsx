@@ -12,6 +12,9 @@ type ClientData = {
   fullName: string;
   email: string;
   phone: string | null;
+  companyName: string | null;
+  address: string | null;
+  zipCode: string | null;
   status: string;
 };
 
@@ -25,6 +28,9 @@ export default function EditClientPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [address, setAddress] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('ENABLED');
   const [saving, setSaving] = useState(false);
@@ -47,6 +53,9 @@ export default function EditClientPage() {
           setFullName(data.fullName || '');
           setEmail(data.email || '');
           setPhone(data.phone || '');
+          setCompanyName(data.companyName || '');
+          setAddress(data.address || '');
+          setZipCode(data.zipCode || '');
           setStatus(data.status || 'ENABLED');
         } else {
           setClient(null);
@@ -90,6 +99,9 @@ export default function EditClientPage() {
           fullName,
           email,
           phone,
+          companyName: companyName || undefined,
+          address: address || undefined,
+          zipCode: zipCode || undefined,
           password: password || undefined,
           status,
         }),
@@ -106,6 +118,9 @@ export default function EditClientPage() {
       setClient((prev) => (prev ? { ...prev, ...data } : null));
       setFullName(data.fullName ?? fullName);
       setEmail(data.email ?? email);
+      setCompanyName(data.companyName ?? '');
+      setAddress(data.address ?? '');
+      setZipCode(data.zipCode ?? '');
       setPassword('');
     } catch {
       setMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
@@ -189,6 +204,45 @@ export default function EditClientPage() {
                     id="phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="companyName" className="form-label">
+                    Razón social
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="companyName"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="address" className="form-label">
+                    Dirección
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="zipCode" className="form-label">
+                    Código postal
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="zipCode"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
                     disabled={saving}
                   />
                 </div>

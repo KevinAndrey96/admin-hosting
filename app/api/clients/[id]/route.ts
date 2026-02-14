@@ -14,50 +14,29 @@ function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
 }
 
 async function getClientById(id: string) {
-  const userAsClient = await prisma.user.findFirst({
+  const user = await prisma.user.findUnique({
     where: { id },
     include: {
-      clientProfile: {
-        include: { _count: { select: { domains: true, hosting: true } } },
-      },
-    },
-  });
-  if (userAsClient) {
-    return {
-      id: userAsClient.clientProfile?.id ?? userAsClient.id,
-      userID: userAsClient.id,
-      fullName: userAsClient.fullName,
-      email: userAsClient.email,
-      phone: userAsClient.phone,
-      status: userAsClient.status,
-      domainsCount: userAsClient.clientProfile?._count?.domains ?? 0,
-      hostingCount: userAsClient.clientProfile?._count?.hosting ?? 0,
-      createdAt: userAsClient.createdAt,
-      updatedAt: userAsClient.updatedAt,
-    };
-  }
-  const profile = await prisma.clientProfile.findUnique({
-    where: { id },
-    include: {
-      user: { select: { id: true, fullName: true, email: true, phone: true, status: true } },
       _count: { select: { domains: true, hosting: true } },
     },
   });
-  if (profile) {
-    return {
-      id: profile.id,
-      userID: profile.userID,
-      fullName: profile.user.fullName,
-      email: profile.user.email,
-      phone: profile.user.phone,
-      status: profile.user.status,
-      domainsCount: profile._count.domains,
-      hostingCount: profile._count.hosting,
-      createdAt: profile.createdAt,
-      updatedAt: profile.updatedAt,
-    };
-  }
-  return null;
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    userID: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    companyName: user.companyName,
+    address: user.address,
+    zipCode: user.zipCode,
+    status: user.status,
+    domainsCount: user._count.domains,
+    hostingCount: user._count.hosting,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
 }
 
 export async function GET(
@@ -102,40 +81,21 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const body = await request.json();
-    const { fullName, email, phone, password, status } = body;
+    const user = await prisma.user.findUnique({ where: { id } });
 
-    let userId: string;
-    let clientProfileId: string | null = null;
-    let userRole: string = 'CLIENT';
-
-    const user = await prisma.user.findFirst({
-      where: { id },
-      include: { clientProfile: true },
-    });
-    if (user) {
-      userId = user.id;
-      userRole = user.role;
-      clientProfileId = user.clientProfile?.id ?? null;
-    } else {
-      const profile = await prisma.clientProfile.findUnique({
-        where: { id },
-        include: { user: true },
-      });
-      if (!profile) {
-        return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
-      }
-      userId = profile.userID;
-      userRole = profile.user.role;
-      clientProfileId = profile.id;
+    if (!user) {
+      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
+
+    const body = await request.json();
+    const { fullName, email, phone, companyName, address, zipCode, password, status } = body;
 
     const normalizedEmail = email?.trim()?.toLowerCase();
     if (normalizedEmail) {
       const existing = await prisma.user.findFirst({
         where: {
           email: normalizedEmail,
-          id: { not: userId },
+          id: { not: id },
         },
       });
       if (existing) {
@@ -146,10 +106,13 @@ export async function PUT(
       }
     }
 
-    const data: { fullName?: string; email?: string; phone?: string | null; status?: 'ENABLED' | 'DISABLED'; password?: string } = {
+    const data: { fullName?: string; email?: string; phone?: string | null; companyName?: string | null; address?: string | null; zipCode?: string | null; status?: 'ENABLED' | 'DISABLED'; password?: string } = {
       ...(fullName?.trim() && { fullName: fullName.trim() }),
       ...(normalizedEmail && { email: normalizedEmail }),
       ...(phone !== undefined && { phone: phone?.trim() || null }),
+      ...(companyName !== undefined && { companyName: companyName?.trim() || null }),
+      ...(address !== undefined && { address: address?.trim() || null }),
+      ...(zipCode !== undefined && { zipCode: zipCode?.trim() || null }),
       ...(status && ['ENABLED', 'DISABLED'].includes(status) && { status: status as 'ENABLED' | 'DISABLED' }),
     };
 
@@ -158,7 +121,7 @@ export async function PUT(
     }
 
     await prisma.user.update({
-      where: { id: userId },
+      where: { id },
       data,
     });
 

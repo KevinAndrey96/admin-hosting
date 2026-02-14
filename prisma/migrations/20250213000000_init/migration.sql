@@ -4,6 +4,9 @@ CREATE TABLE `users` (
     `full_name` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
     `phone` VARCHAR(191) NULL,
+    `company_name` VARCHAR(191) NULL,
+    `address` VARCHAR(191) NULL,
+    `zip_code` VARCHAR(191) NULL,
     `password` VARCHAR(191) NOT NULL,
     `role` ENUM('ADMIN', 'CLIENT') NOT NULL DEFAULT 'CLIENT',
     `status` ENUM('ENABLED', 'DISABLED') NOT NULL DEFAULT 'ENABLED',
@@ -41,31 +44,10 @@ CREATE TABLE `settings` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `client_profiles` (
-    `id` VARCHAR(191) NOT NULL,
-    `user_id` VARCHAR(191) NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
-
-    UNIQUE INDEX `client_profiles_user_id_key`(`user_id`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `registrars` (
-    `id` VARCHAR(191) NOT NULL,
-    `name` VARCHAR(191) NOT NULL,
-    `website` VARCHAR(191) NULL,
-    `notes` TEXT NULL,
-
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
 CREATE TABLE `domains` (
     `id` VARCHAR(191) NOT NULL,
-    `client_id` VARCHAR(191) NOT NULL,
-    `registrar_id` VARCHAR(191) NOT NULL,
+    `user_id` VARCHAR(191) NOT NULL,
+    `registrar_name` VARCHAR(191) NOT NULL,
     `fqdn` VARCHAR(191) NOT NULL,
     `purchase_price` DECIMAL(10, 2) NULL,
     `sale_price` DECIMAL(10, 2) NOT NULL,
@@ -86,9 +68,8 @@ CREATE TABLE `domains` (
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
-    INDEX `domains_client_id_idx`(`client_id`),
+    INDEX `domains_user_id_idx`(`user_id`),
     INDEX `domains_next_billing_date_payment_status_idx`(`next_billing_date`, `payment_status`),
-    INDEX `domains_registrar_id_idx`(`registrar_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -130,7 +111,7 @@ CREATE TABLE `domain_nameservers` (
 -- CreateTable
 CREATE TABLE `hosting_services` (
     `id` VARCHAR(191) NOT NULL,
-    `client_id` VARCHAR(191) NOT NULL,
+    `user_id` VARCHAR(191) NOT NULL,
     `domain_id` VARCHAR(191) NULL,
     `provider_name` VARCHAR(191) NOT NULL,
     `username` VARCHAR(191) NOT NULL,
@@ -148,7 +129,7 @@ CREATE TABLE `hosting_services` (
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
-    INDEX `hosting_services_client_id_idx`(`client_id`),
+    INDEX `hosting_services_user_id_idx`(`user_id`),
     INDEX `hosting_services_next_billing_date_payment_status_idx`(`next_billing_date`, `payment_status`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -156,7 +137,7 @@ CREATE TABLE `hosting_services` (
 -- CreateTable
 CREATE TABLE `charges` (
     `id` VARCHAR(191) NOT NULL,
-    `client_id` VARCHAR(191) NOT NULL,
+    `user_id` VARCHAR(191) NOT NULL,
     `resource_type` ENUM('DOMAIN', 'HOSTING') NOT NULL,
     `resource_id` VARCHAR(191) NOT NULL,
     `period_start` DATETIME(3) NOT NULL,
@@ -170,7 +151,7 @@ CREATE TABLE `charges` (
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
-    INDEX `charges_client_id_idx`(`client_id`),
+    INDEX `charges_user_id_idx`(`user_id`),
     INDEX `charges_due_date_status_idx`(`due_date`, `status`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -196,13 +177,7 @@ CREATE TABLE `payment_receipts` (
 ALTER TABLE `password_reset_tokens` ADD CONSTRAINT `password_reset_tokens_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `client_profiles` ADD CONSTRAINT `client_profiles_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `domains` ADD CONSTRAINT `domains_client_id_fkey` FOREIGN KEY (`client_id`) REFERENCES `client_profiles`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `domains` ADD CONSTRAINT `domains_registrar_id_fkey` FOREIGN KEY (`registrar_id`) REFERENCES `registrars`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `domains` ADD CONSTRAINT `domains_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `domain_whois` ADD CONSTRAINT `domain_whois_domain_id_fkey` FOREIGN KEY (`domain_id`) REFERENCES `domains`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -211,13 +186,13 @@ ALTER TABLE `domain_whois` ADD CONSTRAINT `domain_whois_domain_id_fkey` FOREIGN 
 ALTER TABLE `domain_nameservers` ADD CONSTRAINT `domain_nameservers_domain_id_fkey` FOREIGN KEY (`domain_id`) REFERENCES `domains`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `hosting_services` ADD CONSTRAINT `hosting_services_client_id_fkey` FOREIGN KEY (`client_id`) REFERENCES `client_profiles`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `hosting_services` ADD CONSTRAINT `hosting_services_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `hosting_services` ADD CONSTRAINT `hosting_services_domain_id_fkey` FOREIGN KEY (`domain_id`) REFERENCES `domains`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `charges` ADD CONSTRAINT `charges_client_id_fkey` FOREIGN KEY (`client_id`) REFERENCES `client_profiles`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `charges` ADD CONSTRAINT `charges_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `payment_receipts` ADD CONSTRAINT `payment_receipts_charge_id_fkey` FOREIGN KEY (`charge_id`) REFERENCES `charges`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
