@@ -20,8 +20,6 @@ type WhoisData = {
   privacyEnabled: boolean;
 };
 
-type NameserverData = { id?: string; ipv4: string };
-
 type DomainData = {
   id: string;
   userID: string;
@@ -38,8 +36,9 @@ type DomainData = {
   serviceStatus: string;
   transferLock: boolean;
   healthStatus: string;
+  nameserver1: string | null;
+  nameserver2: string | null;
   whois: WhoisData | null;
-  nameservers: NameserverData[];
 };
 
 type Client = { id: string; fullName: string; email: string; role?: string };
@@ -73,7 +72,8 @@ export default function EditDomainPage() {
     registrantPostalCode: null,
     privacyEnabled: false,
   });
-  const [nameservers, setNameservers] = useState<NameserverData[]>([]);
+  const [nameserver1, setNameserver1] = useState('');
+  const [nameserver2, setNameserver2] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -130,14 +130,8 @@ export default function EditDomainPage() {
               privacyEnabled: false,
             });
           }
-          setNameservers(
-            Array.isArray(data.nameservers)
-              ? data.nameservers.map((ns: NameserverData) => ({
-                  id: ns.id,
-                  ipv4: ns.ipv4 || '',
-                }))
-              : []
-          );
+          setNameserver1(data.nameserver1 || '');
+          setNameserver2(data.nameserver2 || '');
         } else {
           setDomain(null);
         }
@@ -207,10 +201,8 @@ export default function EditDomainPage() {
             registrantPostalCode: whois.registrantPostalCode?.trim() || null,
             privacyEnabled: whois.privacyEnabled,
           },
-          nameservers: nameservers
-            .filter((ns) => ns.ipv4.trim())
-            .slice(0, 2)
-            .map((ns) => ({ ipv4: ns.ipv4.trim() })),
+          nameserver1: nameserver1.trim() || null,
+          nameserver2: nameserver2.trim() || null,
         }),
       });
 
@@ -224,7 +216,8 @@ export default function EditDomainPage() {
       setMessage({ type: 'success', text: 'Dominio actualizado correctamente.' });
       setDomain((prev) => (prev ? { ...prev, ...data } : null));
       if (data.whois) setWhois((w) => ({ ...w, ...data.whois }));
-      if (Array.isArray(data.nameservers)) setNameservers(data.nameservers);
+      if (data.nameserver1 != null) setNameserver1(data.nameserver1 || '');
+      if (data.nameserver2 != null) setNameserver2(data.nameserver2 || '');
     } catch {
       setMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
     } finally {
@@ -569,46 +562,32 @@ export default function EditDomainPage() {
 
                 <hr className="my-4" />
                 <h6 className="mB-20">Nameservers (IPv4, máx. 2)</h6>
-                {nameservers.map((ns, idx) => (
-                  <div key={ns.id || idx} className="row align-items-center mb-2">
-                    <div className="col-md-10">
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        placeholder="Ej: 192.168.1.1"
-                        value={ns.ipv4}
-                        onChange={(e) =>
-                          setNameservers((list) =>
-                            list.map((n, i) => (i === idx ? { ...n, ipv4: e.target.value } : n))
-                          )
-                        }
-                        disabled={saving}
-                      />
-                    </div>
-                    <div className="col-md-2">
-                      <button
-                        type="button"
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => setNameservers((list) => list.filter((_, i) => i !== idx))}
-                        disabled={saving}
-                        title="Eliminar"
-                      >
-                        <i className="ti-trash" />
-                      </button>
-                    </div>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <label htmlFor="nameserver1" className="form-label">Nameserver 1</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="nameserver1"
+                      placeholder="Ej: 192.168.1.1"
+                      value={nameserver1}
+                      onChange={(e) => setNameserver1(e.target.value)}
+                      disabled={saving}
+                    />
                   </div>
-                ))}
-                {nameservers.length < 2 && (
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary btn-sm mb-4"
-                    onClick={() => setNameservers((list) => [...list, { ipv4: '' }])}
-                    disabled={saving}
-                  >
-                    <i className="ti-plus mR-5" />
-                    Agregar nameserver
-                  </button>
-                )}
+                  <div className="col-md-6">
+                    <label htmlFor="nameserver2" className="form-label">Nameserver 2</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="nameserver2"
+                      placeholder="Ej: 192.168.1.2"
+                      value={nameserver2}
+                      onChange={(e) => setNameserver2(e.target.value)}
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
 
                 {message && (
                   <div

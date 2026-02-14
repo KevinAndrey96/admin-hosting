@@ -12,8 +12,6 @@ async function getDomainById(id: string) {
     where: { id },
     include: {
       user: { select: { id: true, fullName: true, email: true } },
-      whois: true,
-      nameservers: { orderBy: { position: 'asc' } },
     },
   });
   if (!domain) return null;
@@ -34,28 +32,22 @@ async function getDomainById(id: string) {
     serviceStatus: domain.serviceStatus,
     transferLock: domain.transferLock,
     healthStatus: domain.healthStatus,
+    nameserver1: domain.nameserver1,
+    nameserver2: domain.nameserver2,
     createdAt: domain.createdAt,
     updatedAt: domain.updatedAt,
-    whois: domain.whois
-      ? {
-          id: domain.whois.id,
-          registrantName: domain.whois.registrantName,
-          registrantOrg: domain.whois.registrantOrg,
-          registrantEmail: domain.whois.registrantEmail,
-          registrantPhone: domain.whois.registrantPhone,
-          registrantAddress: domain.whois.registrantAddress,
-          registrantCity: domain.whois.registrantCity,
-          registrantState: domain.whois.registrantState,
-          registrantCountry: domain.whois.registrantCountry,
-          registrantPostalCode: domain.whois.registrantPostalCode,
-          privacyEnabled: domain.whois.privacyEnabled,
-        }
-      : null,
-    nameservers: domain.nameservers.map((ns) => ({
-      id: ns.id,
-      ipv4: ns.ipv4,
-      position: ns.position,
-    })),
+    whois: {
+      registrantName: domain.registrantName ?? '',
+      registrantOrg: domain.registrantOrg,
+      registrantEmail: domain.registrantEmail ?? '',
+      registrantPhone: domain.registrantPhone,
+      registrantAddress: domain.registrantAddress,
+      registrantCity: domain.registrantCity,
+      registrantState: domain.registrantState,
+      registrantCountry: domain.registrantCountry,
+      registrantPostalCode: domain.registrantPostalCode,
+      privacyEnabled: domain.privacyEnabled,
+    },
   };
 }
 
@@ -119,7 +111,8 @@ export async function PUT(
       serviceStatus,
       transferLock,
       whois: whoisInput,
-      nameservers: nameserversInput,
+      nameserver1: nameserver1Input,
+      nameserver2: nameserver2Input,
     } = body;
 
     const data: Record<string, unknown> = {};
@@ -172,12 +165,13 @@ export async function PUT(
 
     if (transferLock !== undefined) data.transferLock = transferLock !== false;
 
-    await prisma.domain.update({
-      where: { id },
-      data,
-    });
+    if (nameserver1Input !== undefined) {
+      data.nameserver1 = typeof nameserver1Input === 'string' && nameserver1Input.trim() ? nameserver1Input.trim() : null;
+    }
+    if (nameserver2Input !== undefined) {
+      data.nameserver2 = typeof nameserver2Input === 'string' && nameserver2Input.trim() ? nameserver2Input.trim() : null;
+    }
 
-    // Upsert WHOIS
     if (whoisInput && typeof whoisInput === 'object') {
       const {
         registrantName,
@@ -192,42 +186,22 @@ export async function PUT(
         privacyEnabled,
       } = whoisInput;
 
-      const whoisData = {
-        registrantName: String(registrantName ?? '').trim() || 'N/A',
-        registrantOrg: registrantOrg?.trim() || null,
-        registrantEmail: String(registrantEmail ?? '').trim() || 'N/A',
-        registrantPhone: registrantPhone?.trim() || null,
-        registrantAddress: registrantAddress?.trim() || null,
-        registrantCity: registrantCity?.trim() || null,
-        registrantState: registrantState?.trim() || null,
-        registrantCountry: registrantCountry?.trim() || null,
-        registrantPostalCode: registrantPostalCode?.trim() || null,
-        privacyEnabled: Boolean(privacyEnabled),
-      };
-
-      await prisma.domainWhois.upsert({
-        where: { domainID: id },
-        create: { domainID: id, ...whoisData },
-        update: whoisData,
-      });
+      data.registrantName = String(registrantName ?? '').trim() || null;
+      data.registrantOrg = registrantOrg?.trim() || null;
+      data.registrantEmail = String(registrantEmail ?? '').trim() || null;
+      data.registrantPhone = registrantPhone?.trim() || null;
+      data.registrantAddress = registrantAddress?.trim() || null;
+      data.registrantCity = registrantCity?.trim() || null;
+      data.registrantState = registrantState?.trim() || null;
+      data.registrantCountry = registrantCountry?.trim() || null;
+      data.registrantPostalCode = registrantPostalCode?.trim() || null;
+      data.privacyEnabled = Boolean(privacyEnabled);
     }
 
-    // Replace nameservers (máx 2, solo IPv4)
-    if (Array.isArray(nameserversInput)) {
-      await prisma.domainNameserver.deleteMany({ where: { domainID: id } });
-      const validNs = nameserversInput
-        .filter((ns: { ipv4?: string }) => ns && typeof ns.ipv4 === 'string' && ns.ipv4.trim())
-        .slice(0, 2);
-      if (validNs.length > 0) {
-        await prisma.domainNameserver.createMany({
-          data: validNs.map((ns: { ipv4: string }, i: number) => ({
-            domainID: id,
-            ipv4: ns.ipv4.trim(),
-            position: i,
-          })),
-        });
-      }
-    }
+    await prisma.domain.update({
+      where: { id },
+      data,
+    });
 
     const updated = await getDomainById(id);
     return NextResponse.json(updated!);

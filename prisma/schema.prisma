@@ -1,8 +1,8 @@
 // =============================================================================
-// Prisma Schema - Admin Panel (Reseller dominios/hosting)
+// Prisma Schema - Admin Panel (Reseller domains/hosting)
 // =============================================================================
 // Docs: https://pris.ly/d/prisma-schema
-// Migrate fresh: npm run db:reset
+// Fresh migrate: npm run db:reset
 // =============================================================================
 
 generator client {
@@ -72,8 +72,27 @@ model Setting {
 }
 
 // -----------------------------------------------------------------------------
-// Reseller - Domains, Hosting
+// Reseller - Packages, Domains, Hosting
 // -----------------------------------------------------------------------------
+
+model HostingPackage {
+  id                 String   @id @default(cuid())
+  name               String   @map("name")
+  salePrice          Decimal  @map("sale_price") @db.Decimal(10, 2)
+  currency           String   @default("COP")
+  diskSpaceQuotaMb   Int?     @map("disk_space_quota_mb")     // null = unlimited
+  bandwidthLimitMb   Int?     @map("bandwidth_limit_mb")     // null = unlimited
+  maxEmailAccounts   Int?     @map("max_email_accounts")     // null = unlimited
+  maxParkedDomains   Int?     @map("max_parked_domains")
+  maxAddonDomains    Int?     @map("max_addon_domains")      // null = unlimited
+  includedDomains    Int      @map("included_domains")       // domains included in plan
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  hosting HostingService[]
+
+  @@map("hosting_packages")
+}
 
 enum PaymentStatus {
   PENDING
@@ -118,76 +137,61 @@ model Domain {
   serviceStatus  DomainServiceStatus @default(ACTIVE) @map("service_status")
   transferLock   Boolean             @default(true) @map("transfer_lock")
   healthStatus   HealthStatus        @default(UNKNOWN) @map("health_status")
+  nameserver1    String?             @map("nameserver_1")  // IPv4, max 2 per domain
+  nameserver2    String?             @map("nameserver_2")
+  registrantName  String?            @map("registrant_name")
+  registrantOrg   String?            @map("registrant_org")
+  registrantEmail String?            @map("registrant_email")
+  registrantPhone String?            @map("registrant_phone")
+  registrantAddress String?          @map("registrant_address") @db.Text
+  registrantCity  String?            @map("registrant_city")
+  registrantState String?            @map("registrant_state")
+  registrantCountry String?          @map("registrant_country")
+  registrantPostalCode String?       @map("registrant_postal_code")
+  privacyEnabled  Boolean           @default(false) @map("privacy_enabled")
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
 
   user        User              @relation(fields: [userID], references: [id], onDelete: Cascade)
-  whois       DomainWhois?
-  nameservers DomainNameserver[]
-  hosting     HostingService[]
+  hostingDomains HostingDomain[]
 
   @@index([userID])
   @@index([nextBillingDate, paymentStatus])
   @@map("domains")
 }
 
-model DomainWhois {
-  id               String   @id @default(cuid())
-  domainID         String   @unique @map("domain_id")
-  registrantName   String   @map("registrant_name")
-  registrantOrg    String?  @map("registrant_org")
-  registrantEmail  String   @map("registrant_email")
-  registrantPhone  String?  @map("registrant_phone")
-  registrantAddress String? @map("registrant_address") @db.Text
-  registrantCity   String?  @map("registrant_city")
-  registrantState  String?  @map("registrant_state")
-  registrantCountry String? @map("registrant_country")
-  registrantPostalCode String? @map("registrant_postal_code")
-  privacyEnabled   Boolean  @default(false) @map("privacy_enabled")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  domain Domain @relation(fields: [domainID], references: [id], onDelete: Cascade)
-
-  @@map("domain_whois")
-}
-
-model DomainNameserver {
-  id       String  @id @default(cuid())
-  domainID String  @map("domain_id")
-  ipv4     String  // Solo IPv4, máx 2 por dominio
-  position Int     @default(0)
-
-  domain Domain @relation(fields: [domainID], references: [id], onDelete: Cascade)
-
-  @@index([domainID])
-  @@map("domain_nameservers")
-}
-
 model HostingService {
-  id                 String              @id @default(cuid())
-  userID             String              @map("user_id")
-  domainID           String?             @map("domain_id")
-  providerName       String              @map("provider_name")
-  username           String
-  planName           String?             @map("plan_name")
-  capacityMb         Int?                @map("capacity_mb")
-  usedMb             Int?                @map("used_mb")
-  emailAccountsLimit Int?                @map("email_accounts_limit")
-  emailAccountsUsed  Int?                @map("email_accounts_used")
-  salePrice          Decimal             @map("sale_price") @db.Decimal(10, 2)
-  billingCycle       BillingCycle        @default(ANNUAL) @map("billing_cycle")
-  nextBillingDate    DateTime            @map("next_billing_date")
-  paymentStatus      PaymentStatus       @default(PENDING) @map("payment_status")
-  serviceStatus      HostingServiceStatus @default(ENABLED) @map("service_status")
-  notes              String?             @db.Text
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
+  id             String              @id @default(cuid())
+  userID         String              @map("user_id")
+  packageID      String              @map("package_id")
+  username       String
+  billingCycle   BillingCycle        @default(ANNUAL) @map("billing_cycle")
+  nextBillingDate DateTime           @map("next_billing_date")
+  paymentStatus  PaymentStatus       @default(PENDING) @map("payment_status")
+  serviceStatus  HostingServiceStatus @default(ENABLED) @map("service_status")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
 
-  user   User          @relation(fields: [userID], references: [id], onDelete: Cascade)
-  domain Domain?       @relation(fields: [domainID], references: [id], onDelete: SetNull)
+  user    User            @relation(fields: [userID], references: [id], onDelete: Cascade)
+  hostingPackage HostingPackage @relation(fields: [packageID], references: [id], onDelete: Restrict)
+  domains HostingDomain[]
 
   @@index([userID])
+  @@index([packageID])
   @@index([nextBillingDate, paymentStatus])
   @@map("hosting_services")
+}
+
+model HostingDomain {
+  id         String         @id @default(cuid())
+  hostingID  String         @map("hosting_id")
+  domainID   String         @map("domain_id")
+
+  hosting HostingService @relation(fields: [hostingID], references: [id], onDelete: Cascade)
+  domain Domain         @relation(fields: [domainID], references: [id], onDelete: Cascade)
+
+  @@unique([hostingID, domainID])
+  @@index([hostingID])
+  @@index([domainID])
+  @@map("hosting_domains")
 }

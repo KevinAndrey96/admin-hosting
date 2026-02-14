@@ -7,11 +7,15 @@ import { usePathname } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
 import { useSession } from '@/app/hooks/useSession';
 
+// Hide demo options (Go Pro, Email, Compose, etc.) - set to false to show them
+const HIDE_DEMO_ITEMS = true;
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { logoUrl, companyName } = useSettings();
   const { user } = useSession();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const hiddenStyle = HIDE_DEMO_ITEMS ? { display: 'none' as const } : undefined;
 
   useEffect(() => {
     if (pathname?.startsWith('/tables')) setOpenDropdown('tables');
@@ -69,7 +73,7 @@ export default function Sidebar() {
               <span className="icon-holder">
                 <i className="c-blue-500 ti-home" />
               </span>
-              <span className="title">Dashboard</span>
+              <span className="title">Inicio</span>
             </Link>
           </li>
           <li className={`nav-item ${pathname === '/profile' ? 'actived' : ''}`}>
@@ -98,6 +102,22 @@ export default function Sidebar() {
                   <span className="title">Dominios</span>
                 </Link>
               </li>
+              <li className={`nav-item ${pathname?.startsWith('/packages') ? 'actived' : ''}`}>
+                <Link href="/packages" className="sidebar-link">
+                  <span className="icon-holder">
+                    <i className="c-amber-500 ti-package" />
+                  </span>
+                  <span className="title">Paquetes</span>
+                </Link>
+              </li>
+              <li className={`nav-item ${pathname?.startsWith('/hosting') ? 'actived' : ''}`}>
+                <Link href="/hosting" className="sidebar-link">
+                  <span className="icon-holder">
+                    <i className="c-orange-500 ti-server" />
+                  </span>
+                  <span className="title">Hosting</span>
+                </Link>
+              </li>
               <li className={`nav-item ${pathname === '/settings' ? 'actived' : ''}`}>
                 <Link href="/settings" className="sidebar-link">
                   <span className="icon-holder">
@@ -108,7 +128,7 @@ export default function Sidebar() {
               </li>
             </>
           )}
-          <li className="nav-item">
+          <li className="nav-item" style={hiddenStyle}>
             <a className="sidebar-link" href="https://dashboardpack.com/?utm_source=adminator&utm_medium=sidebar&utm_campaign=go_pro" target="_blank" rel="noopener noreferrer">
               <span className="icon-holder">
                 <i className="c-purple-500 ti-crown" />
@@ -116,7 +136,7 @@ export default function Sidebar() {
               <span className="title">Go Pro <span className="badge bg-primary ms-2">PRO</span></span>
             </a>
           </li>
-          <li className="nav-item">
+          <li className="nav-item" style={hiddenStyle}>
             <Link href="/email" className="sidebar-link">
               <span className="icon-holder">
                 <i className="c-brown-500 ti-email" />
@@ -124,7 +144,7 @@ export default function Sidebar() {
               <span className="title">Email</span>
             </Link>
           </li>
-          <li className="nav-item">
+          <li className="nav-item" style={hiddenStyle}>
             <Link href="/compose" className="sidebar-link">
               <span className="icon-holder">
                 <i className="c-blue-500 ti-share" />
@@ -132,7 +152,7 @@ export default function Sidebar() {
               <span className="title">Compose</span>
             </Link>
           </li>
-          <li className="nav-item">
+          <li className="nav-item" style={hiddenStyle}>
             <Link href="/calendar" className="sidebar-link">
               <span className="icon-holder">
                 <i className="c-deep-orange-500 ti-calendar" />
@@ -140,7 +160,7 @@ export default function Sidebar() {
               <span className="title">Calendar <span className="badge bg-danger ms-2">HOT</span></span>
             </Link>
           </li>
-          <li className="nav-item">
+          <li className="nav-item" style={hiddenStyle}>
             <Link href="/chat" className="sidebar-link">
               <span className="icon-holder">
                 <i className="c-deep-purple-500 ti-comment-alt" />
@@ -148,7 +168,7 @@ export default function Sidebar() {
               <span className="title">Chat</span>
             </Link>
           </li>
-          <li className="nav-item">
+          <li className="nav-item" style={hiddenStyle}>
             <Link href="/charts" className="sidebar-link">
               <span className="icon-holder">
                 <i className="c-indigo-500 ti-bar-chart" />
@@ -156,7 +176,7 @@ export default function Sidebar() {
               <span className="title">Charts <span className="badge bg-success ms-2">NEW</span></span>
             </Link>
           </li>
-          <li className="nav-item">
+          <li className="nav-item" style={hiddenStyle}>
             <Link href="/forms" className="sidebar-link">
               <span className="icon-holder">
                 <i className="c-light-blue-500 ti-pencil" />
@@ -164,7 +184,7 @@ export default function Sidebar() {
               <span className="title">Forms</span>
             </Link>
           </li>
-          <li className="nav-item dropdown">
+          <li className="nav-item dropdown" style={hiddenStyle}>
             <Link href="/ui" className="sidebar-link">
               <span className="icon-holder">
                 <i className="c-pink-500 ti-palette" />
@@ -172,7 +192,7 @@ export default function Sidebar() {
               <span className="title">UI Elements</span>
             </Link>
           </li>
-          <li className={`nav-item dropdown ${openDropdown === 'tables' ? 'open' : ''}`}>
+          <li className={`nav-item dropdown ${openDropdown === 'tables' ? 'open' : ''}`} style={hiddenStyle}>
             <a className="dropdown-toggle sidebar-link" href="#" onClick={toggleDropdown('tables')} role="button">
               <span className="icon-holder">
                 <i className="c-orange-500 ti-layout-list-thumb" />
@@ -191,7 +211,7 @@ export default function Sidebar() {
               </li>
             </ul>
           </li>
-          <li className={`nav-item dropdown ${openDropdown === 'maps' ? 'open' : ''}`}>
+          <li className={`nav-item dropdown ${openDropdown === 'maps' ? 'open' : ''}`} style={hiddenStyle}>
             <a className="dropdown-toggle sidebar-link" href="#" onClick={toggleDropdown('maps')} role="button">
               <span className="icon-holder">
                 <i className="c-purple-500 ti-map" />
@@ -206,7 +226,7 @@ export default function Sidebar() {
               <li><Link href="/maps/vector" className="sidebar-dropdown-link">Vector Map</Link></li>
             </ul>
           </li>
-          <li className={`nav-item dropdown ${openDropdown === 'pages' ? 'open' : ''}`}>
+          <li className={`nav-item dropdown ${openDropdown === 'pages' ? 'open' : ''}`} style={hiddenStyle}>
             <a className="dropdown-toggle sidebar-link" href="#" onClick={toggleDropdown('pages')} role="button">
               <span className="icon-holder">
                 <i className="c-red-500 ti-files" />
@@ -224,7 +244,7 @@ export default function Sidebar() {
               <li><Link href="/signup" className="sidebar-dropdown-link">Registro</Link></li>
             </ul>
           </li>
-          <li className={`nav-item dropdown ${openDropdown === 'levels' ? 'open' : ''}`}>
+          <li className={`nav-item dropdown ${openDropdown === 'levels' ? 'open' : ''}`} style={hiddenStyle}>
             <a className="dropdown-toggle sidebar-link" href="#" onClick={toggleDropdown('levels')} role="button">
               <span className="icon-holder">
                 <i className="c-teal-500 ti-view-list-alt" />

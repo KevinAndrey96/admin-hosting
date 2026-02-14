@@ -1,6 +1,6 @@
 [
   {
-    "id": "usr_clra7b2c3d4e5f6g7h8i9j0k1",
+    "id": "usr_57614547cad71d590880ba88",
     "fullName": "Kevin Andrey Herrera Silva",
     "email": "kahs_kevin@hotmail.com",
     "phone": "3185563342",
@@ -9,8 +9,16 @@
     "status": "ENABLED"
   },
   {
-    "id": "usr_clrb2c3d4e5f6g7h8i9j0k1l2",
-    "clientProfileId": "clt_clrc3d4e5f6g7h8i9j0k1l2m3",
+    "id": "usr_57614547cad71d590880ba80",
+    "fullName": "Kevin Andrey Herrera Silva",
+    "email": "kevinandreyhs@gmail.com",
+    "phone": "3185563342",
+    "password": "Admin2026@",
+    "role": "CLIENT",
+    "status": "ENABLED"
+  },
+  {
+    "id": "usr_e769e5564107eefb78cdce6c",
     "fullName": "Juan Carlos",
     "email": "jcarlos_f_r@hotmail.com",
     "phone": "3188831666",
@@ -22,13 +30,63 @@
     "status": "ENABLED"
   },
   {
-    "id": "usr_clrb2c3d1830581738599j0k1l3",
+    "id": "usr_c90c289767a8be356a795062",
     "fullName": "Roberto Forero",
     "email": "roberto.forero@ansftranslations.com",
     "phone": "31000000000",
     "companyName": "ANSF Translations",
     "address": "calle 150A",
     "zipCode": "111156",
+    "password": "Client2026@",
+    "role": "CLIENT",
+    "status": "ENABLED"
+  },
+  {
+    "id": "usr_fcad2a4cea9348c11114162c",
+    "fullName": "Johan Aguirre",
+    "email": "johandanielaguirre@hotmail.es",
+    "phone": "3202881313",
+    "companyName": "Inttelgo SAS",
+    "password": "Client2026@",
+    "role": "CLIENT",
+    "status": "ENABLED"
+  },
+  {
+    "id": "usr_774810724fd1dd34b45c61ee",
+    "fullName": "Dickson Herrera",
+    "email": "dickson@dualbranding.com",
+    "phone": "3125521734",
+    "companyName": "Dual Branding Studio",
+    "password": "Client2026@",
+    "role": "CLIENT",
+    "status": "ENABLED"
+  },
+  {
+    "id": "usr_9c078a62a5f26dfec737dc55",
+    "fullName": "Cesar Sanchez",
+    "email": "ditsintegralservice@gmail.com",
+    "phone": "3504062905",
+    "companyName": "ditsintegralservice",
+    "password": "Client2026@",
+    "role": "CLIENT",
+    "status": "ENABLED"
+  },
+  {
+    "id": "usr_5f87f98375b27e29cc28585e",
+    "fullName": "Edwin",
+    "email": "edwin@agadvantagegroup.com",
+    "phone": "3108775780",
+    "companyName": "Edwin",
+    "password": "Client2026@",
+    "role": "CLIENT",
+    "status": "ENABLED"
+  },
+  {
+    "id": "usr_09d6d1e7bca30d411ac0b352",
+    "fullName": "Laura",
+    "email": "laura@portoamericas.com",
+    "phone": "3193652238",
+    "companyName": "Portoamericas",
     "password": "Client2026@",
     "role": "CLIENT",
     "status": "ENABLED"

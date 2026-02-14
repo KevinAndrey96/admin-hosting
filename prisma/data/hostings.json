@@ -1,0 +1,110 @@
+[
+  {
+    "userID": "usr_e769e5564107eefb78cdce6c",
+    "packageID": "pkg_gold",
+    "username": "garixweb",
+    "nextBillingDate": "2027-01-26",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["garix.com.co"]
+  },
+  {
+    "userID": "usr_c90c289767a8be356a795062",
+    "packageID": "pkg_gold",
+    "username": "ansfhost",
+    "nextBillingDate": "2026-08-31",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["ansftranslations.com"]
+  },
+  {
+    "userID": "usr_774810724fd1dd34b45c61ee",
+    "packageID": "pkg_gold",
+    "username": "dualbs",
+    "nextBillingDate": "2026-02-13",
+    "paymentStatus": "PENDING",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["dualbs.com"]
+  },
+  {
+    "userID": "usr_9c078a62a5f26dfec737dc55",
+    "packageID": "pkg_gold",
+    "username": "highsolutions",
+    "nextBillingDate": "2026-02-14",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["highsolutionssas.com"]
+  },
+  {
+    "userID": "usr_57614547cad71d590880ba88",
+    "packageID": "pkg_gold",
+    "username": "instanceshape",
+    "nextBillingDate": "2026-02-13",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["instanceshape.com"]
+  },
+  {
+    "userID": "usr_57614547cad71d590880ba88",
+    "packageID": "pkg_gold",
+    "username": "nmpsicologia",
+    "nextBillingDate": "2026-09-30",
+    "paymentStatus": "UNPAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["nmpsicologiaenevolucion.com"]
+  },
+  {
+    "userID": "usr_774810724fd1dd34b45c61ee",
+    "packageID": "pkg_gold",
+    "username": "tamalestol",
+    "nextBillingDate": "2026-02-21",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["tamalestolimenseseduard.com"]
+  },
+  {
+    "userID": "usr_774810724fd1dd34b45c61ee",
+    "packageID": "pkg_gold",
+    "username": "tumejorseg",
+    "nextBillingDate": "2027-12-30",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["tumejorseguridad.com"]
+  },
+  {
+    "userID": "usr_fcad2a4cea9348c11114162c",
+    "packageID": "pkg_gold",
+    "username": "webmastercol",
+    "nextBillingDate": "2026-02-13",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["webmastercolombia.net"]
+  },
+  {
+    "userID": "usr_5f87f98375b27e29cc28585e",
+    "packageID": "pkg_gold",
+    "username": "agadvantage",
+    "nextBillingDate": "2026-08-09",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["agadvantagegroup.com"]
+  },
+  {
+    "userID": "usr_774810724fd1dd34b45c61ee",
+    "packageID": "pkg_gold",
+    "username": "mundialdesillas",
+    "nextBillingDate": "2026-05-27",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["mundialdesillas.com"]
+  },
+  {
+    "userID": "usr_09d6d1e7bca30d411ac0b352",
+    "packageID": "pkg_gold",
+    "username": "portoamericas",
+    "nextBillingDate": "2026-05-16",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["portoamericas.com.co"]
+  }
+]

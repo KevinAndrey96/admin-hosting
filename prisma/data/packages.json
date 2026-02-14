@@ -1,0 +1,62 @@
+[
+  {
+    "id": "pkg_bronze",
+    "name": "Bronze",
+    "salePrice": 159900,
+    "currency": "COP",
+    "diskSpaceQuotaMb": 500,
+    "bandwidthLimitMb": 50000,
+    "maxEmailAccounts": 5,
+    "maxParkedDomains": 1,
+    "maxAddonDomains": 0,
+    "includedDomains": 1
+  },
+  {
+    "id": "pkg_silver",
+    "name": "Silver",
+    "salePrice": 199999,
+    "currency": "COP",
+    "diskSpaceQuotaMb": 1000,
+    "bandwidthLimitMb": 100000,
+    "maxEmailAccounts": 5,
+    "maxParkedDomains": 1,
+    "maxAddonDomains": 0,
+    "includedDomains": 1
+  },
+  {
+    "id": "pkg_gold",
+    "name": "Gold",
+    "salePrice": 289999,
+    "currency": "COP",
+    "diskSpaceQuotaMb": 2000,
+    "bandwidthLimitMb": 200000,
+    "maxEmailAccounts": "unlimited",
+    "maxParkedDomains": 1,
+    "maxAddonDomains": 1,
+    "includedDomains": 1
+  },
+  {
+    "id": "pkg_platinum",
+    "name": "Platinum",
+    "salePrice": 499999,
+    "currency": "COP",
+    "diskSpaceQuotaMb": 5000,
+    "bandwidthLimitMb": 500000,
+    "maxEmailAccounts": "unlimited",
+    "maxParkedDomains": 1,
+    "maxAddonDomains": 2,
+    "includedDomains": 1
+  },
+  {
+    "id": "pkg_diamond",
+    "name": "Diamond",
+    "salePrice": 819999,
+    "currency": "COP",
+    "diskSpaceQuotaMb": 10000,
+    "bandwidthLimitMb": 100000,
+    "maxEmailAccounts": "unlimited",
+    "maxParkedDomains": 1,
+    "maxAddonDomains": "unlimited",
+    "includedDomains": 1
+  }
+]

@@ -29,6 +29,55 @@ async function main() {
   }
   console.log('Settings seed completed.');
 
+  // Packages (with explicit IDs for cross-reference)
+  const packages = loadJson<Array<{
+    id: string;
+    name: string;
+    salePrice: number;
+    currency?: string;
+    diskSpaceQuotaMb?: number | 'unlimited';
+    bandwidthLimitMb?: number | 'unlimited';
+    maxEmailAccounts?: number | 'unlimited';
+    maxParkedDomains?: number | 'unlimited';
+    maxAddonDomains?: number | 'unlimited';
+    includedDomains?: number;
+  }>>('packages.json');
+
+  const parseLimit = (v: number | 'unlimited' | undefined): number | null => {
+    if (v === 'unlimited' || v == null) return null;
+    return typeof v === 'number' ? v : null;
+  };
+
+  for (const p of packages) {
+    await prisma.hostingPackage.upsert({
+      where: { id: p.id },
+      create: {
+        id: p.id,
+        name: p.name,
+        salePrice: p.salePrice,
+        currency: p.currency || 'COP',
+        diskSpaceQuotaMb: parseLimit(p.diskSpaceQuotaMb),
+        bandwidthLimitMb: parseLimit(p.bandwidthLimitMb),
+        maxEmailAccounts: parseLimit(p.maxEmailAccounts),
+        maxParkedDomains: parseLimit(p.maxParkedDomains),
+        maxAddonDomains: parseLimit(p.maxAddonDomains),
+        includedDomains: p.includedDomains ?? 1,
+      },
+      update: {
+        name: p.name,
+        salePrice: p.salePrice,
+        currency: p.currency || 'COP',
+        diskSpaceQuotaMb: parseLimit(p.diskSpaceQuotaMb),
+        bandwidthLimitMb: parseLimit(p.bandwidthLimitMb),
+        maxEmailAccounts: parseLimit(p.maxEmailAccounts),
+        maxParkedDomains: parseLimit(p.maxParkedDomains),
+        maxAddonDomains: parseLimit(p.maxAddonDomains),
+        includedDomains: p.includedDomains ?? 1,
+      },
+    });
+    console.log(`Package seeded: ${p.name} (${p.id})`);
+  }
+
   // Users (with explicit IDs for cross-reference)
   const users = loadJson<Array<{
     id: string;
@@ -101,12 +150,68 @@ async function main() {
           currency: d.currency || 'COP',
           renewalDate: renewal,
           nextBillingDate: renewal,
-          paymentStatus: (d.paymentStatus as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED') || 'PENDING',
-          serviceStatus: (d.serviceStatus as 'ACTIVE' | 'AT_RISK' | 'EXPIRED') || 'ACTIVE',
+          paymentStatus: (['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'].includes(d.paymentStatus || '')
+            ? (d.paymentStatus as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED')
+            : d.paymentStatus === 'UNPAID' ? 'OVERDUE' : 'PENDING'),
+          serviceStatus: (['ACTIVE', 'AT_RISK', 'EXPIRED'].includes(d.serviceStatus || '')
+            ? (d.serviceStatus as 'ACTIVE' | 'AT_RISK' | 'EXPIRED')
+            : 'AT_RISK') || 'ACTIVE',
           transferLock: d.transferLock !== false,
         },
       });
       console.log(`Domain seeded: ${d.fqdn} (user: ${d.userID})`);
+    }
+  }
+
+  // Hostings (reference userID, packageID, domainFqdns)
+  const hostings = loadJson<Array<{
+    userID: string;
+    packageID: string;
+    username: string;
+    nextBillingDate?: string;
+    paymentStatus?: string;
+    serviceStatus?: string;
+    domainFqdns?: string[];
+  }>>('hostings.json');
+
+  for (const h of hostings) {
+    const pkg = await prisma.hostingPackage.findUnique({ where: { id: h.packageID } });
+    if (!pkg) {
+      console.log(`Hosting skipped: paquete "${h.packageID}" no encontrado`);
+      continue;
+    }
+
+    const domainIds: string[] = [];
+    if (Array.isArray(h.domainFqdns) && h.domainFqdns.length > 0) {
+      const domains = await prisma.domain.findMany({
+        where: {
+          userID: h.userID,
+          fqdn: { in: h.domainFqdns.map((f) => f.toLowerCase()) },
+        },
+      });
+      domainIds.push(...domains.map((d) => d.id));
+    }
+
+    const existing = await prisma.hostingService.findFirst({
+      where: { userID: h.userID, username: h.username },
+    });
+    if (!existing) {
+      await prisma.hostingService.create({
+        data: {
+          userID: h.userID,
+          packageID: h.packageID,
+          username: h.username,
+          nextBillingDate: h.nextBillingDate ? new Date(h.nextBillingDate) : new Date(),
+          paymentStatus: (['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'].includes(h.paymentStatus || '')
+            ? (h.paymentStatus as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED')
+            : h.paymentStatus === 'UNPAID' ? 'OVERDUE' : 'PENDING'),
+          serviceStatus: (h.serviceStatus as 'ENABLED' | 'SUSPENDED' | 'CANCELLED') || 'ENABLED',
+          domains: domainIds.length > 0
+            ? { create: domainIds.map((domainID) => ({ domainID })) }
+            : undefined,
+        },
+      });
+      console.log(`Hosting seeded: ${h.username} (${pkg.name})`);
     }
   }
 
