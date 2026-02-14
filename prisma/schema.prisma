@@ -173,7 +173,7 @@ model HostingService {
   @@index([userID])
   @@index([packageID])
   @@index([nextBillingDate, paymentStatus])
-  @@map("hosting_services")
+  @@map("hostings")
 }
 
 model HostingDomain {

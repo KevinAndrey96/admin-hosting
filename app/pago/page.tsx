@@ -310,6 +310,8 @@ function PagoContent() {
                     </p>
                   </div>
 
+                  {basePrice > 0 ? (
+                    <>
                   <h6 className="fw-600 c-grey-800 mB-15">Pagos sin comisión</h6>
                   <div
                     role="button"
@@ -354,6 +356,15 @@ function PagoContent() {
                       </p>
                     )}
                   </div>
+                    </>
+                  ) : (
+                    <div className="p-20 bdrs-3" style={{ backgroundColor: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)' }}>
+                      <p className="m-0 fsz-sm c-grey-800">
+                        <i className="ti-check mR-5 c-success" />
+                        Este servicio no tiene costo asociado. Contacta al administrador para proceder.
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </div>

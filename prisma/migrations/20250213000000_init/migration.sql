@@ -47,6 +47,7 @@ CREATE TABLE `settings` (
 CREATE TABLE `hosting_packages` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
+    `color_hex` VARCHAR(7) NULL,
     `sale_price` DECIMAL(10, 2) NOT NULL,
     `currency` VARCHAR(191) NOT NULL DEFAULT 'COP',
     `disk_space_quota_mb` INTEGER NULL,
@@ -96,7 +97,7 @@ CREATE TABLE `domains` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `hosting_services` (
+CREATE TABLE `hostings` (
     `id` VARCHAR(191) NOT NULL,
     `user_id` VARCHAR(191) NOT NULL,
     `package_id` VARCHAR(191) NOT NULL,
@@ -108,9 +109,9 @@ CREATE TABLE `hosting_services` (
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
-    INDEX `hosting_services_user_id_idx`(`user_id`),
-    INDEX `hosting_services_package_id_idx`(`package_id`),
-    INDEX `hosting_services_next_billing_date_payment_status_idx`(`next_billing_date`, `payment_status`),
+    INDEX `hostings_user_id_idx`(`user_id`),
+    INDEX `hostings_package_id_idx`(`package_id`),
+    INDEX `hostings_next_billing_date_payment_status_idx`(`next_billing_date`, `payment_status`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -133,13 +134,13 @@ ALTER TABLE `password_reset_tokens` ADD CONSTRAINT `password_reset_tokens_user_i
 ALTER TABLE `domains` ADD CONSTRAINT `domains_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `hosting_services` ADD CONSTRAINT `hosting_services_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `hostings` ADD CONSTRAINT `hostings_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `hosting_services` ADD CONSTRAINT `hosting_services_package_id_fkey` FOREIGN KEY (`package_id`) REFERENCES `hosting_packages`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `hostings` ADD CONSTRAINT `hostings_package_id_fkey` FOREIGN KEY (`package_id`) REFERENCES `hosting_packages`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `hosting_domains` ADD CONSTRAINT `hosting_domains_hosting_id_fkey` FOREIGN KEY (`hosting_id`) REFERENCES `hosting_services`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `hosting_domains` ADD CONSTRAINT `hosting_domains_hosting_id_fkey` FOREIGN KEY (`hosting_id`) REFERENCES `hostings`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `hosting_domains` ADD CONSTRAINT `hosting_domains_domain_id_fkey` FOREIGN KEY (`domain_id`) REFERENCES `domains`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

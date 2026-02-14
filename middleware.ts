@@ -5,6 +5,7 @@ const PROTECTED_PATHS = [
   '/dashboard',
   '/profile',
   '/pago',
+  '/soporte',
   '/clients',
   '/domains',
   '/hosting',

@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '../components/AdminLayout';
 import { useSession } from '../hooks/useSession';
+import { useSettings } from '../hooks/useSettings';
 import dayjs from 'dayjs';
 
 type Domain = {
@@ -35,18 +37,32 @@ const PAYMENT_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelado',
 };
 
+function getDaysUntilExpiration(expDate: Date): number {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const exp = new Date(expDate);
+  exp.setHours(0, 0, 0, 0);
+  return Math.floor((exp.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+}
+
 export default function DomainsPage() {
   const router = useRouter();
   const { user, loading: sessionLoading } = useSession();
+  const { settings } = useSettings();
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(100);
   const [sortKey, setSortKey] = useState<SortKey>('');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [deleteModal, setDeleteModal] = useState<Domain | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [renewModal, setRenewModal] = useState<Domain | null>(null);
+  const [renewing, setRenewing] = useState(false);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [priceInfoOpen, setPriceInfoOpen] = useState<string | null>(null);
+  const [priceInfoRect, setPriceInfoRect] = useState<DOMRect | null>(null);
   const [pingStatus, setPingStatus] = useState<Record<string, 'loading' | number | null>>({});
   const [domainCheck, setDomainCheck] = useState('');
   const [availabilityResult, setAvailabilityResult] = useState<{
@@ -57,6 +73,18 @@ export default function DomainsPage() {
     error?: string;
   } | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
+  useEffect(() => {
+    if (!priceInfoOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('[data-price-info]')) {
+        setPriceInfoOpen(null);
+        setPriceInfoRect(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [priceInfoOpen]);
 
   const getStatusBadgeColor = (statusCode: number | null): string => {
     if (statusCode === null) return '#6c757d'; // grey - error/timeout
@@ -139,6 +167,21 @@ export default function DomainsPage() {
   }, [filteredData, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
+
+  const hasDomainExpiringSoon = useMemo(() => {
+    return domains.some((d) => {
+      if (d.paymentStatus === 'CANCELLED') return false;
+      const daysLeft = getDaysUntilExpiration(new Date(d.nextBillingDate));
+      return daysLeft <= 30;
+    });
+  }, [domains]);
+
+  const reactivationPenaltyRaw = settings?.domain_reactivation_penalty?.trim() ?? '';
+  const reactivationPenalty = reactivationPenaltyRaw
+    ? `$ ${Number(reactivationPenaltyRaw).toLocaleString('es-CO')}`
+    : '';
+  const showReactivationNotice = hasDomainExpiringSoon && reactivationPenaltyRaw;
+
   const paginatedData = useMemo(
     () => sortedData.slice((page - 1) * pageSize, page * pageSize),
     [sortedData, page, pageSize]
@@ -152,6 +195,57 @@ export default function DomainsPage() {
       }
     });
   }, [domainIds]);
+
+  const handleRenew = async () => {
+    if (!renewModal) return;
+    setRenewing(true);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/domains/${renewModal.id}/renew`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const newDate = data.nextBillingDate ? new Date(data.nextBillingDate) : dayjs(renewModal.nextBillingDate).add(1, 'year').toDate();
+        setDomains((prev) =>
+          prev.map((d) =>
+            d.id === renewModal.id
+              ? { ...d, nextBillingDate: newDate.toISOString(), renewalDate: newDate.toISOString(), paymentStatus: 'PAID' }
+              : d
+          )
+        );
+        setRenewModal(null);
+      } else {
+        alert(data.error || 'Error al renovar');
+      }
+    } catch {
+      alert('Error de conexión');
+    } finally {
+      setRenewing(false);
+    }
+  };
+
+  const handleSendReminder = async (d: Domain) => {
+    setSendingReminderId(d.id);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/domains/${d.id}/send-reminder`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Error al enviar el recordatorio');
+        return;
+      }
+      alert(data.message || 'Recordatorio enviado');
+    } catch {
+      alert('Error al enviar el recordatorio');
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteModal) return;
@@ -295,12 +389,17 @@ export default function DomainsPage() {
                         <i className="ti-check mR-5" />
                         {availabilityResult.domain} está disponible
                       </strong>
-                      {availabilityResult.price != null && (
-                        <span className="c-grey-700 d-b mB-10">
-                          Desde $ {Number(availabilityResult.price).toLocaleString('es-CO')}/año
-                        </span>
-                      )}
-                      {availabilityResult.domain && (
+                      <span className="c-grey-800 d-b mB-10 fw-600">
+                        {availabilityResult.price != null && availabilityResult.price > 0 ? (
+                          <>
+                            Desde {availabilityResult.currency === 'COP' ? '$' : availabilityResult.currency === 'USD' ? 'US$' : availabilityResult.currency + ' '}
+                            {Number(availabilityResult.price).toLocaleString('es-CO')}/año
+                          </>
+                        ) : (
+                          'Precio a consultar'
+                        )}
+                      </span>
+                      {availabilityResult.domain && (availabilityResult.price == null || Number(availabilityResult.price) > 0) && (
                         <Link
                           href={`/pago?tipo=contratar-dominio&dominio=${encodeURIComponent(availabilityResult.domain)}`}
                           className="btn btn-sm btn-success"
@@ -457,8 +556,46 @@ export default function DomainsPage() {
                         {user?.role === 'ADMIN' && (
                           <td className="c-grey-800">{d.registrarName}</td>
                         )}
-                        <td className="c-grey-800 ta-e">
-                          $ {d.salePrice.toLocaleString('es-CO')}
+                        <td className="c-grey-800 ta-e" style={{ position: 'relative' }} data-price-info>
+                          <span className="d-f ai-c jc-e gap-2">
+                            $ {d.salePrice.toLocaleString('es-CO')}
+                            <button
+                              type="button"
+                              className="btn btn-link p-0 m-0"
+                              style={{ fontSize: 14, color: '#6c757d', minWidth: 'auto', lineHeight: 1 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                if (priceInfoOpen === d.id) {
+                                  setPriceInfoOpen(null);
+                                  setPriceInfoRect(null);
+                                } else {
+                                  setPriceInfoOpen(d.id);
+                                  setPriceInfoRect(rect);
+                                }
+                              }}
+                              title="Información"
+                            >
+                              <i className="ti-help-alt" />
+                            </button>
+                          </span>
+                          {priceInfoOpen === d.id && priceInfoRect && typeof document !== 'undefined' && createPortal(
+                            <div
+                              className="popover bs-popover-top show"
+                              style={{
+                                position: 'fixed',
+                                right: window.innerWidth - priceInfoRect.right,
+                                bottom: window.innerHeight - priceInfoRect.top + 6,
+                                zIndex: 9999,
+                                maxWidth: 280,
+                              }}
+                            >
+                              <div className="popover-body p-10 bdrs-3" style={{ backgroundColor: '#fff', border: '1px solid rgba(0,0,0,0.15)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                                Este dominio ya está incluido con uno de tus paquetes de hosting contratados
+                              </div>
+                            </div>,
+                            document.body
+                          )}
                         </td>
                         <td className="c-grey-800">
                           {dayjs(d.nextBillingDate).format('DD/MM/YYYY')}
@@ -536,23 +673,48 @@ export default function DomainsPage() {
                               <i className="ti-world" />
                             </a>
                             {user?.role === 'ADMIN' && (
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => setDeleteModal(d)}
-                                title="Eliminar"
-                              >
-                                <i className="ti-trash" />
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-secondary p-8 m-0"
+                                  onClick={() => handleSendReminder(d)}
+                                  disabled={!!sendingReminderId}
+                                  title="Enviar recordatorio de vencimiento"
+                                >
+                                  {sendingReminderId === d.id ? (
+                                    <i className="ti-reload ti-spin" style={{ fontSize: 18 }} />
+                                  ) : (
+                                    <i className="ti-bell" style={{ fontSize: 18 }} />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-success p-8 m-0"
+                                  onClick={() => setRenewModal(d)}
+                                  title="Renovar servicio"
+                                >
+                                  <i className="ti-plus" style={{ fontSize: 18 }} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => setDeleteModal(d)}
+                                  title="Eliminar"
+                                >
+                                  <i className="ti-trash" />
+                                </button>
+                              </>
                             )}
-                            <Link
-                              href={`/pago?tipo=renovar-dominio&domainId=${encodeURIComponent(d.id)}`}
-                              className="btn btn-sm btn-success d-f ai-c jc-c"
-                              style={{ color: '#fff' }}
-                              title="Renovar ahora"
-                            >
-                              <i className="ti-wallet" />
-                            </Link>
+                            {d.salePrice > 0 && (
+                              <Link
+                                href={`/pago?tipo=renovar-dominio&domainId=${encodeURIComponent(d.id)}`}
+                                className="btn btn-sm btn-success d-f ai-c jc-c"
+                                style={{ color: '#fff' }}
+                                title="Renovar ahora"
+                              >
+                                <i className="ti-wallet" />
+                              </Link>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -588,10 +750,77 @@ export default function DomainsPage() {
                   </button>
                 </div>
               </div>
+              {showReactivationNotice && (
+                <p className="fsz-sm c-grey-600 mT-15 mB-0 p-12 bd bdrs-3" style={{ backgroundColor: '#fefce8', borderColor: '#fde047' }}>
+                  <i className="ti-info-alt mR-8" />
+                  Los dominios vencidos tienen un costo adicional de reactivación:{' '}
+                  <strong>{reactivationPenalty}</strong>
+                </p>
+              )}
             </>
           )}
         </div>
       </div>
+
+      {renewModal && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          tabIndex={-1}
+          role="dialog"
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header" style={{ backgroundColor: '#20c997', color: '#fff' }}>
+                <h5 className="modal-title m-0">
+                  <i className="ti-plus mR-8" />
+                  Renovar dominio
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  aria-label="Cerrar"
+                  onClick={() => !renewing && setRenewModal(null)}
+                  disabled={renewing}
+                />
+              </div>
+              <div className="modal-body">
+                <p className="c-grey-800 mB-15">
+                  ¿Extender la vigencia de este dominio por un año adicional? El dominio{' '}
+                  <strong>{renewModal.fqdn}</strong> de <strong>{renewModal.clientName}</strong> se mantendrá activo sin interrupciones.
+                </p>
+                <div className="p-15 bdrs-3 mB-0" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                  <p className="m-0 fsz-sm c-grey-700 mB-5">
+                    Fecha actual de vencimiento: <strong>{dayjs(renewModal.nextBillingDate).format('DD/MM/YYYY')}</strong>
+                  </p>
+                  <p className="m-0 fsz-sm c-grey-700">
+                    Nueva fecha de vencimiento: <strong>{dayjs(renewModal.nextBillingDate).add(1, 'year').format('DD/MM/YYYY')}</strong>
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setRenewModal(null)}
+                  disabled={renewing}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  style={{ color: '#fff' }}
+                  onClick={handleRenew}
+                  disabled={renewing}
+                >
+                  {renewing ? 'Renovando...' : 'Confirmar renovación'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteModal && (
         <div

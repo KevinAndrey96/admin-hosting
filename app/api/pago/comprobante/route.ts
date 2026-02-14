@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const filename = `comprobante_${Date.now()}_${session.userId?.slice(0, 8)}${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Guardar en disco como respaldo
+    // Save to disk as backup
     const uploadDir = path.join(process.cwd(), 'uploads', 'comprobantes');
     await mkdir(uploadDir, { recursive: true });
     const filepath = path.join(uploadDir, filename);

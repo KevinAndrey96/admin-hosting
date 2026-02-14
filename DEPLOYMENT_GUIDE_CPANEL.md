@@ -12,6 +12,7 @@ cp .env.local.example .env.local
 
 Edita `.env.local` y configura:
 - `DATABASE_URL` - Requerido para Prisma (SQLite, PostgreSQL o MySQL)
+- `CRON_SECRET` - Requerido para el cron de recordatorios (genera con `openssl rand -base64 32`)
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` - Opcional, para mapas de Google
 
 ### 1.2 Generar el build
@@ -122,6 +123,24 @@ O si usas SQLite, asegúrate de que el archivo de base de datos tenga permisos d
 
 ---
 
+## 5. Configurar el cron (recordatorios de renovación)
+
+**Importante**: Para que funcionen los recordatorios automáticos de dominios y hosting (correos a clientes, avisos a admins, health check de dominios), debes configurar un cron que llame al endpoint diariamente.
+
+1. En `.env.local` define `CRON_SECRET` (genera uno con `openssl rand -base64 32`).
+2. En cPanel, abre **Cron Jobs**.
+3. Crea un cron que se ejecute **una vez al día** (ej. a las 8:00 AM):
+
+   ```bash
+   curl -H "Authorization: Bearer TU_CRON_SECRET" https://tu-dominio.com/admin/api/cron/renewal-reminders
+   ```
+
+   Ajusta la URL según tu dominio y ruta base (ej. si usas `https://admin.tudominio.com`, sería `https://admin.tudominio.com/api/cron/renewal-reminders`).
+
+4. Los recordatorios a clientes se pueden activar/desactivar desde **Configuración** en el panel.
+
+---
+
 ## Resumen rápido
 
 | Paso | Dónde | Acción |
@@ -133,3 +152,4 @@ O si usas SQLite, asegúrate de que el archivo de base de datos tenga permisos d
 | 5 | cPanel Node.js | Crear/editar app: root `admin`, startup `start-server.js`, Node 22 |
 | 6 | cPanel Node.js | Run NPM Install |
 | 7 | cPanel Node.js | Restart App |
+| 8 | cPanel Cron Jobs | Configurar cron diario para `/api/cron/renewal-reminders` con `CRON_SECRET` |

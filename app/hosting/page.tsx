@@ -73,7 +73,7 @@ export default function HostingPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(100);
   const [sortKey, setSortKey] = useState<SortKey>('');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [deleteModal, setDeleteModal] = useState<Hosting | null>(null);
@@ -84,6 +84,9 @@ export default function HostingPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [contractSubmitting, setContractSubmitting] = useState(false);
   const [redirectModal, setRedirectModal] = useState<{ hosting: Hosting; url: string; title: string } | null>(null);
+  const [renewModal, setRenewModal] = useState<Hosting | null>(null);
+  const [renewing, setRenewing] = useState(false);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionLoading && !user) {
@@ -122,6 +125,7 @@ export default function HostingPage() {
   }, [redirectModal]);
 
   useEffect(() => {
+    if (!user || user?.role === 'ADMIN') return;
     const fetchPackages = async () => {
       try {
         const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
@@ -134,7 +138,7 @@ export default function HostingPage() {
         setPackages([]);
       }
     };
-    if (user) fetchPackages();
+    fetchPackages();
   }, [user]);
 
   const filteredData = useMemo(() => {
@@ -178,6 +182,57 @@ export default function HostingPage() {
     () => sortedData.slice((page - 1) * pageSize, page * pageSize),
     [sortedData, page, pageSize]
   );
+
+  const handleRenew = async () => {
+    if (!renewModal) return;
+    setRenewing(true);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/hosting/${renewModal.id}/renew`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const newDate = data.nextBillingDate ? new Date(data.nextBillingDate) : dayjs(renewModal.nextBillingDate).add(1, 'year').toDate();
+        setHostings((prev) =>
+          prev.map((h) =>
+            h.id === renewModal.id
+              ? { ...h, nextBillingDate: newDate.toISOString(), paymentStatus: 'PAID' }
+              : h
+          )
+        );
+        setRenewModal(null);
+      } else {
+        alert(data.error || 'Error al renovar');
+      }
+    } catch {
+      alert('Error de conexión');
+    } finally {
+      setRenewing(false);
+    }
+  };
+
+  const handleSendReminder = async (h: Hosting) => {
+    setSendingReminderId(h.id);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/hosting/${h.id}/send-reminder`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Error al enviar el recordatorio');
+        return;
+      }
+      alert(data.message || 'Recordatorio enviado');
+    } catch {
+      alert('Error al enviar el recordatorio');
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteModal) return;
@@ -246,6 +301,7 @@ export default function HostingPage() {
           </div>
         </div>
 
+        {user?.role !== 'ADMIN' && (
         <div className="mB-20">
           <h5 className="m-0 mB-10 c-grey-900 fw-600">
             Planes de hosting disponibles
@@ -352,6 +408,7 @@ export default function HostingPage() {
             </div>
           )}
         </div>
+        )}
 
         <div className="bd bgc-white bdrs-3 p-20" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
           {loading ? (
@@ -577,35 +634,62 @@ export default function HostingPage() {
                         </td>
                         <td className="ta-c">
                           <div className="d-f gap-2 jc-c fxw-w">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-primary p-8 m-0"
-                              onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/cpanel', title: 'cPanel' })}
-                              title="Acceder a cPanel"
-                            >
-                              <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/cpanel.png`} alt="cPanel" width={20} height={20} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary p-8 m-0"
-                              onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/webmail', title: 'Webmail' })}
-                              title="Acceder a Webmail"
-                            >
-                              <i className="ti-email" style={{ fontSize: 18 }} />
-                            </button>
-                            <Link
-                              href={`/pago?tipo=renovar-hosting&hostingId=${encodeURIComponent(h.id)}`}
-                              className="btn btn-sm btn-success p-8 m-0"
-                              style={{ color: '#fff' }}
-                              title="Renovar ahora"
-                            >
-                              <i className="ti-wallet" style={{ fontSize: 18 }} />
-                            </Link>
+                            {user?.role !== 'ADMIN' && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-primary p-8 m-0"
+                                  onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/cpanel', title: 'cPanel' })}
+                                  title="Acceder a cPanel"
+                                >
+                                  <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/cpanel.png`} alt="cPanel" width={20} height={20} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-secondary p-8 m-0"
+                                  onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/webmail', title: 'Webmail' })}
+                                  title="Acceder a Webmail"
+                                >
+                                  <i className="ti-email" style={{ fontSize: 18 }} />
+                                </button>
+                              </>
+                            )}
+                            {h.salePrice > 0 && (
+                              <Link
+                                href={`/pago?tipo=renovar-hosting&hostingId=${encodeURIComponent(h.id)}`}
+                                className="btn btn-sm btn-success p-8 m-0"
+                                style={{ color: '#fff' }}
+                                title="Renovar ahora"
+                              >
+                                <i className="ti-wallet" style={{ fontSize: 18 }} />
+                              </Link>
+                            )}
                           </div>
                         </td>
                         {user?.role === 'ADMIN' && (
                           <td className="ta-e">
                             <div className="d-f gap-2 jc-e">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-secondary p-8 m-0"
+                                onClick={() => handleSendReminder(h)}
+                                disabled={!!sendingReminderId}
+                                title="Enviar recordatorio de vencimiento"
+                              >
+                                {sendingReminderId === h.id ? (
+                                  <i className="ti-reload ti-spin" style={{ fontSize: 18 }} />
+                                ) : (
+                                  <i className="ti-bell" style={{ fontSize: 18 }} />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-success p-8 m-0"
+                                onClick={() => setRenewModal(h)}
+                                title="Renovar servicio"
+                              >
+                                <i className="ti-plus" style={{ fontSize: 18 }} />
+                              </button>
                               <Link
                                 href={`/hosting/${h.id}/edit`}
                                 className="btn btn-sm btn-primary"
@@ -744,15 +828,17 @@ export default function HostingPage() {
                 >
                   Cancelar
                 </button>
-                <Link
-                  href={`/pago?tipo=contratar-hosting&packageId=${encodeURIComponent(contractModal.id)}`}
-                  className="btn btn-success d-f ai-c gap-2"
-                  style={{ color: '#fff' }}
-                  onClick={() => setContractModal(null)}
-                >
-                  <i className="ti-wallet" />
-                  Pagar ahora
-                </Link>
+                {contractModal.salePrice > 0 && (
+                  <Link
+                    href={`/pago?tipo=contratar-hosting&packageId=${encodeURIComponent(contractModal.id)}`}
+                    className="btn btn-success d-f ai-c gap-2"
+                    style={{ color: '#fff' }}
+                    onClick={() => setContractModal(null)}
+                  >
+                    <i className="ti-wallet" />
+                    Pagar ahora
+                  </Link>
+                )}
                 <button
                   type="button"
                   className="btn btn-primary"
@@ -854,6 +940,66 @@ export default function HostingPage() {
                   </div>
                   <span className="c-grey-600 fsz-sm">Redirigiendo en 5 segundos...</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {renewModal && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          tabIndex={-1}
+          role="dialog"
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header" style={{ backgroundColor: '#20c997', color: '#fff' }}>
+                <h5 className="modal-title m-0">
+                  <i className="ti-plus mR-8" />
+                  Renovar servicio
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  aria-label="Cerrar"
+                  onClick={() => !renewing && setRenewModal(null)}
+                  disabled={renewing}
+                />
+              </div>
+              <div className="modal-body">
+                <p className="c-grey-800 mB-15">
+                  ¿Extender la vigencia de este hosting por un año adicional? El servicio de{' '}
+                  <strong>{renewModal.clientName}</strong> ({renewModal.username}) se mantendrá activo sin interrupciones.
+                </p>
+                <div className="p-15 bdrs-3 mB-0" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                  <p className="m-0 fsz-sm c-grey-700 mB-5">
+                    Fecha actual de vencimiento: <strong>{dayjs(renewModal.nextBillingDate).format('DD/MM/YYYY')}</strong>
+                  </p>
+                  <p className="m-0 fsz-sm c-grey-700">
+                    Nueva fecha de vencimiento: <strong>{dayjs(renewModal.nextBillingDate).add(1, 'year').format('DD/MM/YYYY')}</strong>
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setRenewModal(null)}
+                  disabled={renewing}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  style={{ color: '#fff' }}
+                  onClick={handleRenew}
+                  disabled={renewing}
+                >
+                  {renewing ? 'Renovando...' : 'Confirmar renovación'}
+                </button>
               </div>
             </div>
           </div>

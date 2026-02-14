@@ -1,7 +1,7 @@
 [
   {
     "userID": "usr_e769e5564107eefb78cdce6c",
-    "packageID": "pkg_gold",
+    "packageID": "pkg_silver",
     "username": "garixweb",
     "nextBillingDate": "2027-01-26",
     "paymentStatus": "PAID",
@@ -19,7 +19,7 @@
   },
   {
     "userID": "usr_774810724fd1dd34b45c61ee",
-    "packageID": "pkg_gold",
+    "packageID": "pkg_platinum",
     "username": "dualbs",
     "nextBillingDate": "2026-02-13",
     "paymentStatus": "PENDING",
@@ -37,7 +37,7 @@
   },
   {
     "userID": "usr_57614547cad71d590880ba80",
-    "packageID": "pkg_gold",
+    "packageID": "pkg_platinum",
     "username": "instanceshape",
     "nextBillingDate": "2026-02-13",
     "paymentStatus": "PAID",
@@ -64,7 +64,7 @@
   },
   {
     "userID": "usr_774810724fd1dd34b45c61ee",
-    "packageID": "pkg_gold",
+    "packageID": "pkg_silver",
     "username": "tumejorseg",
     "nextBillingDate": "2027-12-30",
     "paymentStatus": "PAID",
@@ -73,9 +73,18 @@
   },
   {
     "userID": "usr_fcad2a4cea9348c11114162c",
-    "packageID": "pkg_gold",
+    "packageID": "pkg_bronze",
     "username": "webmastercol",
-    "nextBillingDate": "2026-02-13",
+    "nextBillingDate": "2026-09-29",
+    "paymentStatus": "PAID",
+    "serviceStatus": "ENABLED",
+    "domainFqdns": ["webmastercolombia.net"]
+  },
+  {
+    "userID": "usr_fcad2a4cea9348c11114162c",
+    "packageID": "pkg_bronze",
+    "username": "inttelgo",
+    "nextBillingDate": "2026-11-22",
     "paymentStatus": "PAID",
     "serviceStatus": "ENABLED",
     "domainFqdns": ["webmastercolombia.net"]
@@ -100,7 +109,7 @@
   },
   {
     "userID": "usr_09d6d1e7bca30d411ac0b352",
-    "packageID": "pkg_gold",
+    "packageID": "pkg_platinum",
     "username": "portoamericas",
     "nextBillingDate": "2026-05-16",
     "paymentStatus": "PAID",

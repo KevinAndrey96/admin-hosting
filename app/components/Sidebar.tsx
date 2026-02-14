@@ -76,24 +76,6 @@ export default function Sidebar() {
               <span className="title">Inicio</span>
             </Link>
           </li>
-          <li className={`nav-item ${pathname === '/profile' ? 'actived' : ''}`}>
-            <Link href="/profile" className="sidebar-link">
-              <span className="icon-holder">
-                <i className="c-indigo-500 ti-user" />
-              </span>
-              <span className="title">Mi cuenta</span>
-            </Link>
-          </li>
-          {user?.role === 'ADMIN' && (
-            <li className={`nav-item ${pathname?.startsWith('/clients') ? 'actived' : ''}`}>
-              <Link href="/clients" className="sidebar-link">
-                <span className="icon-holder">
-                  <i className="c-green-500 ti-agenda" />
-                </span>
-                <span className="title">Clientes</span>
-              </Link>
-            </li>
-          )}
           <li className={`nav-item ${pathname?.startsWith('/domains') ? 'actived' : ''}`}>
             <Link href="/domains" className="sidebar-link">
               <span className="icon-holder">
@@ -110,8 +92,32 @@ export default function Sidebar() {
               <span className="title">Hosting</span>
             </Link>
           </li>
+          <li className={`nav-item ${pathname === '/profile' ? 'actived' : ''}`}>
+            <Link href="/profile" className="sidebar-link">
+              <span className="icon-holder">
+                <i className="c-indigo-500 ti-user" />
+              </span>
+              <span className="title">Mi cuenta</span>
+            </Link>
+          </li>
+          <li className={`nav-item ${pathname === '/soporte' ? 'actived' : ''}`}>
+            <Link href="/soporte" className="sidebar-link">
+              <span className="icon-holder">
+                <i className="c-green-500 ti-headphone-alt" />
+              </span>
+              <span className="title">Soporte</span>
+            </Link>
+          </li>
           {user?.role === 'ADMIN' && (
             <>
+              <li className={`nav-item ${pathname?.startsWith('/clients') ? 'actived' : ''}`}>
+                <Link href="/clients" className="sidebar-link">
+                  <span className="icon-holder">
+                    <i className="c-green-500 ti-agenda" />
+                  </span>
+                  <span className="title">Clientes</span>
+                </Link>
+              </li>
               <li className={`nav-item ${pathname?.startsWith('/packages') ? 'actived' : ''}`}>
                 <Link href="/packages" className="sidebar-link">
                   <span className="icon-holder">

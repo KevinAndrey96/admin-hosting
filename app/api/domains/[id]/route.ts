@@ -3,6 +3,12 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { sendEmail } from '@/lib/email';
+import {
+  updateDomainNameservers,
+  updateDomainWhois,
+  updateDomainPrivacyPreference,
+  getDomainWhoisFromSpaceship,
+} from '@/lib/spaceship';
 
 function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
@@ -68,7 +74,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const domain = await getDomainById(id);
+    let domain = await getDomainById(id);
 
     if (!domain) {
       return NextResponse.json({ error: 'Dominio no encontrado' }, { status: 404 });
@@ -76,6 +82,37 @@ export async function GET(
 
     if (session.role !== 'ADMIN' && domain.userID !== session.userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    // If Spaceship domain and no WHOIS saved locally, fetch from Spaceship
+    const isSpaceship = domain.registrarName?.toLowerCase() === 'spaceship';
+    const hasNoWhois =
+      !domain.whois.registrantName?.trim() && !domain.whois.registrantEmail?.trim();
+    if (isSpaceship && hasNoWhois) {
+      const spaceshipData = await getDomainWhoisFromSpaceship(domain.fqdn);
+      if (spaceshipData) {
+        domain = {
+          ...domain,
+          whois: {
+            ...domain.whois,
+            registrantName: spaceshipData.whois.registrantName || domain.whois.registrantName,
+            registrantOrg: spaceshipData.whois.registrantOrg ?? domain.whois.registrantOrg,
+            registrantEmail: spaceshipData.whois.registrantEmail || domain.whois.registrantEmail,
+            registrantPhone: spaceshipData.whois.registrantPhone ?? domain.whois.registrantPhone,
+            registrantAddress:
+              spaceshipData.whois.registrantAddress ?? domain.whois.registrantAddress,
+            registrantCity: spaceshipData.whois.registrantCity ?? domain.whois.registrantCity,
+            registrantState: spaceshipData.whois.registrantState ?? domain.whois.registrantState,
+            registrantCountry:
+              spaceshipData.whois.registrantCountry ?? domain.whois.registrantCountry,
+            registrantPostalCode:
+              spaceshipData.whois.registrantPostalCode ?? domain.whois.registrantPostalCode,
+            privacyEnabled: spaceshipData.whois.privacyEnabled,
+          },
+          nameserver1: domain.nameserver1 ?? spaceshipData.nameserver1,
+          nameserver2: domain.nameserver2 ?? spaceshipData.nameserver2,
+        };
+      }
     }
 
     return NextResponse.json(domain);
@@ -183,6 +220,19 @@ export async function PUT(
       data.nameserver2 = typeof nameserver2Input === 'string' && nameserver2Input.trim() ? nameserver2Input.trim() : null;
     }
 
+    // Sync nameservers to Spaceship when domain is registered there
+    const nameserversInRequest = nameserver1Input !== undefined || nameserver2Input !== undefined;
+    const isSpaceshipDomain = existing.registrarName?.toLowerCase() === 'spaceship';
+    if (nameserversInRequest && isSpaceshipDomain) {
+      const ns1 = String((data.nameserver1 ?? existing.nameserver1) ?? '').trim();
+      const ns2 = String((data.nameserver2 ?? existing.nameserver2) ?? '').trim();
+      const hosts = [ns1, ns2].filter((h) => h.length > 0);
+      const result = await updateDomainNameservers(existing.fqdn, hosts);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 502 });
+      }
+    }
+
     if (whoisInput && typeof whoisInput === 'object') {
       const {
         registrantName,
@@ -207,6 +257,51 @@ export async function PUT(
       data.registrantCountry = registrantCountry?.trim() || null;
       data.registrantPostalCode = registrantPostalCode?.trim() || null;
       data.privacyEnabled = Boolean(privacyEnabled);
+
+      // Sync WHOIS to Spaceship when domain is registered there (skip if privacy enabled - contact hidden)
+      const whoisInRequest = true;
+      const whoisChanged =
+        data.registrantName !== (existing.registrantName ?? null) ||
+        data.registrantOrg !== (existing.registrantOrg ?? null) ||
+        data.registrantEmail !== (existing.registrantEmail ?? null) ||
+        data.registrantPhone !== (existing.registrantPhone ?? null) ||
+        data.registrantAddress !== (existing.registrantAddress ?? null) ||
+        data.registrantCity !== (existing.registrantCity ?? null) ||
+        data.registrantState !== (existing.registrantState ?? null) ||
+        data.registrantCountry !== (existing.registrantCountry ?? null) ||
+        data.registrantPostalCode !== (existing.registrantPostalCode ?? null);
+
+      if (whoisInRequest && whoisChanged && isSpaceshipDomain && !data.privacyEnabled) {
+        const whoisResult = await updateDomainWhois(existing.fqdn, {
+          registrantName: String(data.registrantName ?? ''),
+          registrantOrg: (data.registrantOrg as string | null) ?? undefined,
+          registrantEmail: String(data.registrantEmail ?? ''),
+          registrantPhone: (data.registrantPhone as string | null) ?? undefined,
+          registrantAddress: (data.registrantAddress as string | null) ?? undefined,
+          registrantCity: (data.registrantCity as string | null) ?? undefined,
+          registrantState: (data.registrantState as string | null) ?? undefined,
+          registrantCountry: (data.registrantCountry as string | null) ?? undefined,
+          registrantPostalCode: (data.registrantPostalCode as string | null) ?? undefined,
+        });
+        if (!whoisResult.ok) {
+          return NextResponse.json({ error: whoisResult.error }, { status: 502 });
+        }
+      }
+    }
+
+    // Sync privacy (public/high) to Spaceship when domain is registered there
+    if (
+      data.privacyEnabled !== undefined &&
+      data.privacyEnabled !== existing.privacyEnabled &&
+      isSpaceshipDomain
+    ) {
+      const privacyResult = await updateDomainPrivacyPreference(
+        existing.fqdn,
+        Boolean(data.privacyEnabled)
+      );
+      if (!privacyResult.ok) {
+        return NextResponse.json({ error: privacyResult.error }, { status: 502 });
+      }
     }
 
     const hasChanges = Object.keys(data).length > 0 && (() => {
@@ -235,7 +330,15 @@ export async function PUT(
       data,
     });
 
-    if (hasChanges) {
+    // Don't notify admins when only nameservers changed and we synced to Spaceship
+    const changedKeys = Object.keys(data);
+    const onlyNameserversChanged =
+      isSpaceshipDomain &&
+      nameserversInRequest &&
+      changedKeys.every((k) => k === 'nameserver1' || k === 'nameserver2');
+    const shouldNotifyAdmins = hasChanges && !onlyNameserversChanged;
+
+    if (shouldNotifyAdmins) {
       const admins = await prisma.user.findMany({
         where: { role: 'ADMIN', status: 'ENABLED' },
         select: { email: true, fullName: true },

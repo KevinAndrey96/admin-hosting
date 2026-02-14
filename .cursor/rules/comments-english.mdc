@@ -1,0 +1,9 @@
+---
+description: All code comments must be in English
+alwaysApply: true
+---
+
+# Comments in English
+
+- Write all code comments in **English** (including `.env.example`, config files, and inline comments).
+- User-facing text (labels, error messages, UI copy) may remain in Spanish for the target audience.

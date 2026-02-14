@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSession } from '@/lib/session';
+import { getSettings } from '@/lib/settings';
 
 function requireAuth(session: { isLoggedIn: boolean; userId?: string }) {
   return session.isLoggedIn && session.userId;
@@ -60,14 +61,46 @@ export async function GET(request: NextRequest) {
     }
 
     const result = data.result === 'available' ? 'available' : 'taken';
-    const price = data.premiumPricing?.[0];
+    const domainLower = (data.domain || domain).toLowerCase();
+
+    // For .com, .net, .com.co, .co: use configured price from settings
+    const settings = await getSettings();
+    let price: number | null = null;
+    let currency = 'COP';
+
+    if (domainLower.endsWith('.com.co')) {
+      const v = settings.domain_com_co_price?.trim();
+      price = v ? Number(v) : null;
+    } else if (domainLower.endsWith('.co')) {
+      const v = settings.domain_co_price?.trim();
+      price = v ? Number(v) : null;
+    } else if (domainLower.endsWith('.com')) {
+      const v = settings.domain_com_price?.trim();
+      price = v ? Number(v) : null;
+    } else if (domainLower.endsWith('.net')) {
+      const v = settings.domain_net_price?.trim();
+      price = v ? Number(v) : null;
+    }
+
+    // Fallback to Spaceship price when no configured price for these TLDs or for other TLDs
+    if (price == null || isNaN(price)) {
+      const priceObj =
+        data.premiumPricing?.[0] ??
+        data.pricing?.[0] ??
+        (data.pricing && typeof data.pricing === 'object' && !Array.isArray(data.pricing) ? data.pricing : null);
+      const rawPrice = priceObj?.price ?? data.price;
+      price = rawPrice != null ? Number(rawPrice) : null;
+      currency = priceObj?.currency ?? data.currency ?? 'COP';
+    }
+
+    if (price != null && isNaN(price)) price = null;
 
     return NextResponse.json({
       domain: data.domain || domain,
       available: result === 'available',
       result,
-      price: price?.price,
-      currency: price?.currency || 'USD',
+      price: price != null && !isNaN(price) ? price : null,
+      currency,
     });
   } catch (error) {
     console.error('Check availability error:', error);

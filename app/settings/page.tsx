@@ -14,11 +14,18 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#6366f1');
   const [secondaryColor, setSecondaryColor] = useState('#64748b');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [numeroDaviplata, setNumeroDaviplata] = useState('');
   const [numeroNequi, setNumeroNequi] = useState('');
   const [llaveBreB, setLlaveBreB] = useState('');
   const [cuentaBancolombia, setCuentaBancolombia] = useState('');
   const [linkPagoMercadopago, setLinkPagoMercadopago] = useState('');
+  const [renewalReminderEnabled, setRenewalReminderEnabled] = useState(true);
+  const [domainReactivationPenalty, setDomainReactivationPenalty] = useState('');
+  const [domainComPrice, setDomainComPrice] = useState('');
+  const [domainNetPrice, setDomainNetPrice] = useState('');
+  const [domainComCoPrice, setDomainComCoPrice] = useState('');
+  const [domainCoPrice, setDomainCoPrice] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -28,11 +35,18 @@ export default function SettingsPage() {
       setLogoUrl(settings.logo_url ?? '');
       setPrimaryColor(settings.primary_color ?? '#6366f1');
       setSecondaryColor(settings.secondary_color ?? '#64748b');
+      setWhatsappNumber(settings.whatsapp_number ?? '');
       setNumeroDaviplata(settings.daviplata_number ?? '');
       setNumeroNequi(settings.nequi_number ?? '');
       setLlaveBreB(settings.breb_key ?? '');
       setCuentaBancolombia(settings.bancolombia_account ?? '');
       setLinkPagoMercadopago(settings.mercadopago_payment_link ?? '');
+      setRenewalReminderEnabled(settings.renewal_reminder_enabled === 'true' || settings.renewal_reminder_enabled === '1');
+      setDomainReactivationPenalty(settings.domain_reactivation_penalty ?? '');
+      setDomainComPrice(settings.domain_com_price ?? '');
+      setDomainNetPrice(settings.domain_net_price ?? '');
+      setDomainComCoPrice(settings.domain_com_co_price ?? '');
+      setDomainCoPrice(settings.domain_co_price ?? '');
     }
   }, [settings]);
 
@@ -62,11 +76,18 @@ export default function SettingsPage() {
         logo_url: logoUrl,
         primary_color: primaryColor,
         secondary_color: secondaryColor,
+        whatsapp_number: whatsappNumber,
         daviplata_number: numeroDaviplata,
         nequi_number: numeroNequi,
         breb_key: llaveBreB,
         bancolombia_account: cuentaBancolombia,
         mercadopago_payment_link: linkPagoMercadopago,
+        renewal_reminder_enabled: renewalReminderEnabled ? 'true' : 'false',
+        domain_reactivation_penalty: domainReactivationPenalty.trim(),
+        domain_com_price: domainComPrice.trim(),
+        domain_net_price: domainNetPrice.trim(),
+        domain_com_co_price: domainComCoPrice.trim(),
+        domain_co_price: domainCoPrice.trim(),
       });
       setMessage({ type: 'success', text: 'Configuración guardada correctamente.' });
     } catch {
@@ -123,6 +144,23 @@ export default function SettingsPage() {
                     />
                     <div className="form-text">
                       Ruta relativa (ej: /assets/static/images/logo.svg) o URL absoluta (https://...)
+                    </div>
+                  </div>
+                  <div className="mb-3 mT-20">
+                    <label htmlFor="whatsapp_number" className="form-label">
+                      Número WhatsApp (Soporte)
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="whatsapp_number"
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      placeholder="Ej: 573001234567 (código país + número)"
+                      disabled={saving}
+                    />
+                    <div className="form-text">
+                      Número para el enlace de WhatsApp en la página de Soporte. Incluir código de país (ej: 57 para Colombia).
                     </div>
                   </div>
                   <h6 className="mB-15 mT-25">Datos de pago</h6>
@@ -212,6 +250,75 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </div>
+                  <h6 className="mB-15 mT-25">Dominios</h6>
+                  <div className="mb-3">
+                    <label htmlFor="domain_reactivation_penalty" className="form-label">
+                      Multa por reactivación (dominios vencidos)
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="domain_reactivation_penalty"
+                      value={domainReactivationPenalty}
+                      onChange={(e) => setDomainReactivationPenalty(e.target.value)}
+                      placeholder="Ej: 50000 o $50.000"
+                      disabled={saving}
+                    />
+                    <div className="form-text">
+                      Costo adicional por reactivar un dominio vencido. Se muestra en la tabla de dominios cuando el cliente tiene dominios que vencen en 30 días o menos. Dejar vacío para no mostrar.
+                    </div>
+                  </div>
+                  <div className="row mT-15">
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label htmlFor="domain_com_price" className="form-label">Precio .com</label>
+                        <input type="text" className="form-control" id="domain_com_price" value={domainComPrice} onChange={(e) => setDomainComPrice(e.target.value)} placeholder="Ej: 50000" disabled={saving} />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label htmlFor="domain_net_price" className="form-label">Precio .net</label>
+                        <input type="text" className="form-control" id="domain_net_price" value={domainNetPrice} onChange={(e) => setDomainNetPrice(e.target.value)} placeholder="Ej: 55000" disabled={saving} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label htmlFor="domain_com_co_price" className="form-label">Precio .com.co</label>
+                        <input type="text" className="form-control" id="domain_com_co_price" value={domainComCoPrice} onChange={(e) => setDomainComCoPrice(e.target.value)} placeholder="Ej: 45000" disabled={saving} />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label htmlFor="domain_co_price" className="form-label">Precio .co</label>
+                        <input type="text" className="form-control" id="domain_co_price" value={domainCoPrice} onChange={(e) => setDomainCoPrice(e.target.value)} placeholder="Ej: 40000" disabled={saving} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="form-text mB-15">
+                    Precios mostrados al verificar disponibilidad de dominios. Solo aplica a .com, .net, .com.co y .co.
+                  </div>
+                  <h6 className="mB-15 mT-25">Recordatorios de renovación</h6>
+                  <p className="fsz-sm c-grey-600 mB-15">
+                    Envía correos automáticos a los clientes a 30, 15, 7, 5, 3 y 1 día(s) antes del vencimiento. A 5 días: mensaje urgente. A 3 y 1 día: aviso de expiración. Incluye recordatorio de evitar costos de reactivación y pérdida de información.
+                  </p>
+                  <div className="form-check mB-15">
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      id="renewal_reminder_enabled"
+                      checked={renewalReminderEnabled}
+                      onChange={(e) => setRenewalReminderEnabled(e.target.checked)}
+                      disabled={saving}
+                    />
+                    <label className="form-check-label" htmlFor="renewal_reminder_enabled">
+                      Activar recordatorios por correo
+                    </label>
+                  </div>
+                  <p className="fsz-sm c-grey-600 mB-15">
+                    Configura un cron que llame a <code className="fsz-xs">/api/cron/renewal-reminders</code> diariamente (Vercel Cron, cron-job.org, etc.). Usa el header <code className="fsz-xs">Authorization: Bearer CRON_SECRET</code>.
+                  </p>
                   <h6 className="mB-15 mT-25">Colores de marca</h6>
                   <div className="row">
                     <div className="col-md-6">

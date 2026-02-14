@@ -1,1 +1,17 @@
-{"company_name":"Instance Shape SAS","logo_url":"https://instanceshape.com/wp-content/uploads/2020/03/logo.png","primary_color":"#6366f1","secondary_color":"#64748b","daviplata_number":"3185563342 Kev*** Her***","nequi_number":"3185563342 Kev*** Herr***","breb_key":"3185563342 - Kev*** Her***","bancolombia_account":"Ahorros - 10865331199 - Kevin Herrera","mercadopago_payment_link":"link.mercadopago.com.co/instanceshape"}
+{
+  "company_name": "Instance Shape SAS",
+  "logo_url": "https://instanceshape.com/wp-content/uploads/2020/03/logo.png",
+  "primary_color": "#6366f1",
+  "secondary_color": "#64748b",
+  "whatsapp_number": "3185563342",
+  "daviplata_number": "3185563342 Kev*** Her***",
+  "nequi_number": "3185563342 Kev*** Herr***",
+  "breb_key": "3185563342 - Kev*** Her***",
+  "bancolombia_account": "Ahorros - 10865331199 - Kevin Herrera",
+  "mercadopago_payment_link": "link.mercadopago.com.co/instanceshape",
+  "domain_reactivation_penalty": "50000",
+  "domain_com_price": "49999",
+  "domain_net_price": "49999",
+  "domain_com_co_price": "49999",
+  "domain_co_price": "99999"
+}

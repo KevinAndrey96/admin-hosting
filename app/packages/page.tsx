@@ -9,6 +9,7 @@ import { useSession } from '../hooks/useSession';
 type Package = {
   id: string;
   name: string;
+  colorHex?: string | null;
   salePrice: number;
   currency: string;
   diskSpaceQuotaMb: number | null;
@@ -206,8 +207,16 @@ export default function PackagesPage() {
                   <tbody>
                     {filteredData.map((p) => (
                       <tr key={p.id}>
-                        <td className="fw-500 c-grey-900">
-                          <Link href={`/packages/${p.id}`} className="td-n c-grey-900 hover-c-primary">
+                        <td className="fw-500">
+                          <Link
+                            href={`/packages/${p.id}`}
+                            className="btn btn-sm btn-outline-secondary td-n"
+                            style={{
+                              borderColor: p.colorHex || '#6c757d',
+                              color: p.colorHex || '#6c757d',
+                              backgroundColor: p.colorHex ? `${p.colorHex}12` : undefined,
+                            }}
+                          >
                             {p.name}
                           </Link>
                         </td>

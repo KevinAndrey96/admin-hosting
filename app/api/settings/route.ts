@@ -33,24 +33,31 @@ export async function PUT(request: NextRequest) {
       'logo_url',
       'primary_color',
       'secondary_color',
+      'whatsapp_number',
       'daviplata_number',
       'nequi_number',
       'breb_key',
       'bancolombia_account',
       'mercadopago_payment_link',
+      'renewal_reminder_enabled',
+      'domain_reactivation_penalty',
+      'domain_com_price',
+      'domain_net_price',
+      'domain_com_co_price',
+      'domain_co_price',
     ];
     const hexColorKeys = ['primary_color', 'secondary_color'];
     const data: Record<string, string> = {};
     for (const key of allowedKeys) {
-      if (typeof body[key] === 'string') {
-        const value = body[key].trim();
-        if (hexColorKeys.includes(key)) {
-          if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-            data[key] = value;
-          }
-        } else {
-          data[key] = value;
-        }
+      const raw = body[key];
+      if (raw === undefined || raw === null) continue;
+      const value = String(raw).trim();
+      if (hexColorKeys.includes(key)) {
+        if (/^#[0-9A-Fa-f]{6}$/.test(value)) data[key] = value;
+      } else if (key === 'renewal_reminder_enabled') {
+        data[key] = value === 'true' || value === '1' ? 'true' : 'false';
+      } else {
+        data[key] = value;
       }
     }
 
