@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     await prisma.passwordResetToken.create({
       data: {
-        userId: user.id,
+        userID: user.id,
         token,
         expiresAt,
       },
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
     const origin = request.nextUrl.origin;
     const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
-    // APP_URL: en producción, definir en .env. En localhost sin APP_URL, se usa el origin.
+    // APP_URL: in production, set in .env. On localhost without APP_URL, origin is used.
     const appUrl = process.env.APP_URL || `${origin}${basePath}`;
     const resetUrl = `${appUrl.replace(/\/$/, '')}/reset-password?token=${token}`;
 

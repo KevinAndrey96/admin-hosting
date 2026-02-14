@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { getSession } from '@/lib/session';
+import { getSessionForLogin } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, remember } = body;
 
     if (!email?.trim()) {
       return NextResponse.json(
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const cookieStore = await cookies();
-    const session = await getSession(cookieStore);
+    const session = await getSessionForLogin(cookieStore, !!remember);
 
     session.userId = user.id;
     session.email = user.email;

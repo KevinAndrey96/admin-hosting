@@ -1,3 +1,7 @@
+/**
+ * Prisma Seed - Initial data
+ * Run: npm run db:seed (or automatic with db:reset)
+ */
 import bcrypt from 'bcryptjs';
 import { ensureDefaultSettings } from '../lib/settings';
 import { prisma } from '../lib/prisma';
@@ -25,11 +29,11 @@ const defaultUsers = [
 
 async function main() {
   await ensureDefaultSettings();
-  console.log('Settings seed completed.');
+  console.log('Settings seed completed (company_name, logo_url, primary_color, secondary_color).');
 
   for (const u of defaultUsers) {
     const hashedPassword = await bcrypt.hash(u.password, SALT_ROUNDS);
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { email: u.email },
       create: {
         fullName: u.fullName,
@@ -48,7 +52,30 @@ async function main() {
       },
     });
     console.log(`User seeded: ${u.email} (${u.role})`);
+
+    if (u.role === 'CLIENT') {
+      await prisma.clientProfile.upsert({
+        where: { userID: user.id },
+        create: { userID: user.id },
+        update: {},
+      });
+      console.log(`ClientProfile seeded for ${u.email}`);
+    }
   }
+
+  const existingRegistrar = await prisma.registrar.findFirst({
+    where: { name: 'Registrador por defecto' },
+  });
+  if (!existingRegistrar) {
+    await prisma.registrar.create({
+      data: {
+        name: 'Registrador por defecto',
+        notes: 'Registrador de ejemplo',
+      },
+    });
+    console.log('Default registrar seeded.');
+  }
+
   console.log('Default users seed completed.');
 }
 

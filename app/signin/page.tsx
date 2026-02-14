@@ -40,6 +40,7 @@ export default function SignInPage() {
         body: JSON.stringify({
           email: email.trim(),
           password,
+          remember,
         }),
       });
 

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Script from 'next/script'
 import './globals.css'
 import '../styles/adminator.scss'
+import ThemeInjector from './components/ThemeInjector'
 
 export const metadata: Metadata = {
   title: 'Admin Panel',
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className="app">
+        <ThemeInjector />
         <Script
           id="theme-init"
           strategy="afterInteractive"

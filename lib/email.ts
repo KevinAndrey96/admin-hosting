@@ -1,10 +1,10 @@
 /**
- * Email sending via SMTP (mail server propio).
- * Variables de entorno requeridas en .env:
+ * Email sending via SMTP (own mail server).
+ * Required env vars in .env:
  * SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
- * SMTP_SECURE (opcional, default: false para puerto 587)
- * SMTP_FROM (opcional, default: SMTP_USER)
- * EMAIL_SKIP_SEND (opcional): si "true", no envía y solo loguea (útil en localhost)
+ * SMTP_SECURE (optional, default: false for port 587)
+ * SMTP_FROM (optional, default: SMTP_USER)
+ * EMAIL_SKIP_SEND (optional): if "true", does not send and only logs (useful on localhost)
  */
 
 import nodemailer from 'nodemailer';
@@ -14,7 +14,7 @@ function getTransporter() {
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASSWORD;
-  // Puerto 587 usa STARTTLS (secure: false); puerto 465 usa SSL implícito (secure: true)
+  // Port 587 uses STARTTLS (secure: false); port 465 uses implicit SSL (secure: true)
   const secure = port === 465 || (process.env.SMTP_SECURE === 'true' && port !== 587);
 
   if (!host || !user || !pass) {

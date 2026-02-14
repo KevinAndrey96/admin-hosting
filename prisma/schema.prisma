@@ -1,5 +1,9 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// =============================================================================
+// Prisma Schema - Admin Panel (Reseller dominios/hosting)
+// =============================================================================
+// Docs: https://pris.ly/d/prisma-schema
+// Migrate fresh: npm run db:reset
+// =============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -7,7 +11,12 @@ generator client {
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
+
+// -----------------------------------------------------------------------------
+// Auth & Users
+// -----------------------------------------------------------------------------
 
 enum UserRole {
   ADMIN
@@ -31,19 +40,20 @@ model User {
   updatedAt DateTime   @updatedAt @map("updated_at")
 
   passwordResetTokens PasswordResetToken[]
+  clientProfile       ClientProfile?
 
   @@map("users")
 }
 
 model PasswordResetToken {
   id        String    @id @default(cuid())
-  userId    String    @map("user_id")
+  userID    String    @map("user_id")
   token     String    @unique
   expiresAt DateTime @map("expires_at")
   usedAt    DateTime? @map("used_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userID], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
 }
@@ -56,4 +66,209 @@ model Setting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("settings")
+}
+
+// -----------------------------------------------------------------------------
+// Reseller - Domains, Hosting, Charges
+// -----------------------------------------------------------------------------
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum DomainServiceStatus {
+  ACTIVE
+  AT_RISK
+  EXPIRED
+}
+
+enum HostingServiceStatus {
+  ENABLED
+  SUSPENDED
+  CANCELLED
+}
+
+enum HealthStatus {
+  UP
+  DOWN
+  UNKNOWN
+}
+
+enum BillingCycle {
+  ANNUAL
+}
+
+enum ResourceType {
+  DOMAIN
+  HOSTING
+}
+
+model ClientProfile {
+  id        String   @id @default(cuid())
+  userID    String   @unique @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User             @relation(fields: [userID], references: [id], onDelete: Cascade)
+  domains Domain[]
+  hosting HostingService[]
+  charges Charge[]
+
+  @@map("client_profiles")
+}
+
+model Registrar {
+  id      String  @id @default(cuid())
+  name    String
+  website String?
+  notes   String? @db.Text
+
+  domains Domain[]
+
+  @@map("registrars")
+}
+
+model Domain {
+  id                 String              @id @default(cuid())
+  clientID           String              @map("client_id")
+  registrarID        String              @map("registrar_id")
+  fqdn               String              // e.g. example.com
+  purchasePrice      Decimal?             @map("purchase_price") @db.Decimal(10, 2)
+  salePrice          Decimal              @map("sale_price") @db.Decimal(10, 2)
+  currency           String              @default("COP")
+  billingCycle       BillingCycle        @default(ANNUAL) @map("billing_cycle")
+  renewalDate        DateTime            @map("renewal_date")
+  nextBillingDate    DateTime            @map("next_billing_date")
+  paymentStatus      PaymentStatus       @default(PENDING) @map("payment_status")
+  serviceStatus      DomainServiceStatus @default(ACTIVE) @map("service_status")
+  transferLock       Boolean             @default(true) @map("transfer_lock")
+  authCodeEncrypted  String?             @map("auth_code_encrypted") @db.Text
+  autoRenew          Boolean             @default(false) @map("auto_renew")
+  endpointUrlToCheck String?             @map("endpoint_url_to_check")
+  healthStatus       HealthStatus        @default(UNKNOWN) @map("health_status")
+  lastHealthCheckAt  DateTime?          @map("last_health_check_at")
+  lastHealthHttpCode Int?                @map("last_health_http_code")
+  lastHealthResponseMs Int?              @map("last_health_response_ms")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  client      ClientProfile     @relation(fields: [clientID], references: [id], onDelete: Cascade)
+  registrar   Registrar        @relation(fields: [registrarID], references: [id])
+  whois       DomainWhois?
+  nameservers DomainNameserver[]
+  hosting     HostingService[]
+
+  @@index([clientID])
+  @@index([nextBillingDate, paymentStatus])
+  @@index([registrarID])
+  @@map("domains")
+}
+
+model DomainWhois {
+  id               String   @id @default(cuid())
+  domainID         String   @unique @map("domain_id")
+  registrantName   String   @map("registrant_name")
+  registrantOrg    String?  @map("registrant_org")
+  registrantEmail  String   @map("registrant_email")
+  registrantPhone  String?  @map("registrant_phone")
+  registrantAddress String? @map("registrant_address") @db.Text
+  registrantCity   String?  @map("registrant_city")
+  registrantState  String?  @map("registrant_state")
+  registrantCountry String? @map("registrant_country")
+  registrantPostalCode String? @map("registrant_postal_code")
+  privacyEnabled   Boolean  @default(false) @map("privacy_enabled")
+  rawWhoisJson     String?  @map("raw_whois_json") @db.LongText
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  domain Domain @relation(fields: [domainID], references: [id], onDelete: Cascade)
+
+  @@map("domain_whois")
+}
+
+model DomainNameserver {
+  id       String  @id @default(cuid())
+  domainID String  @map("domain_id")
+  hostname String
+  ipv4     String?
+  ipv6     String?
+  position Int     @default(0)
+
+  domain Domain @relation(fields: [domainID], references: [id], onDelete: Cascade)
+
+  @@index([domainID])
+  @@map("domain_nameservers")
+}
+
+model HostingService {
+  id                 String              @id @default(cuid())
+  clientID           String              @map("client_id")
+  domainID           String?             @map("domain_id")
+  providerName       String              @map("provider_name")
+  username           String
+  planName           String?             @map("plan_name")
+  capacityMb         Int?                @map("capacity_mb")
+  usedMb             Int?                @map("used_mb")
+  emailAccountsLimit Int?                @map("email_accounts_limit")
+  emailAccountsUsed  Int?                @map("email_accounts_used")
+  salePrice          Decimal             @map("sale_price") @db.Decimal(10, 2)
+  billingCycle       BillingCycle        @default(ANNUAL) @map("billing_cycle")
+  nextBillingDate    DateTime            @map("next_billing_date")
+  paymentStatus      PaymentStatus       @default(PENDING) @map("payment_status")
+  serviceStatus      HostingServiceStatus @default(ENABLED) @map("service_status")
+  notes              String?             @db.Text
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  client ClientProfile @relation(fields: [clientID], references: [id], onDelete: Cascade)
+  domain Domain?       @relation(fields: [domainID], references: [id], onDelete: SetNull)
+
+  @@index([clientID])
+  @@index([nextBillingDate, paymentStatus])
+  @@map("hosting_services")
+}
+
+model Charge {
+  id                   String         @id @default(cuid())
+  clientID             String         @map("client_id")
+  resourceType         ResourceType   @map("resource_type")
+  resourceID           String         @map("resource_id")
+  periodStart          DateTime       @map("period_start")
+  periodEnd            DateTime       @map("period_end")
+  amount               Decimal        @db.Decimal(10, 2)
+  currency             String         @default("COP")
+  dueDate              DateTime       @map("due_date")
+  status               PaymentStatus  @default(PENDING)
+  paymentMethodExpected String?       @map("payment_method_expected")
+  paidAt               DateTime?      @map("paid_at")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+
+  client   ClientProfile    @relation(fields: [clientID], references: [id], onDelete: Cascade)
+  receipts PaymentReceipt[]
+
+  @@index([clientID])
+  @@index([dueDate, status])
+  @@map("charges")
+}
+
+model PaymentReceipt {
+  id              String    @id @default(cuid())
+  chargeID        String    @map("charge_id")
+  receiptNumber   String    @map("receipt_number")
+  paidAmount      Decimal   @map("paid_amount") @db.Decimal(10, 2)
+  paymentMethod   String    @map("payment_method")
+  paidAt          DateTime  @map("paid_at")
+  notes           String?   @db.Text
+  legalDisclaimer String?   @map("legal_disclaimer") @db.Text
+  generatedPdfUrl String?   @map("generated_pdf_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  charge Charge @relation(fields: [chargeID], references: [id], onDelete: Cascade)
+
+  @@index([chargeID])
+  @@map("payment_receipts")
 }

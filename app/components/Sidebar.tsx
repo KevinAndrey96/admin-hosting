@@ -81,14 +81,24 @@ export default function Sidebar() {
             </Link>
           </li>
           {user?.role === 'ADMIN' && (
-            <li className={`nav-item ${pathname === '/settings' ? 'actived' : ''}`}>
-              <Link href="/settings" className="sidebar-link">
-                <span className="icon-holder">
-                  <i className="c-teal-500 ti-settings" />
-                </span>
-                <span className="title">Configuración</span>
-              </Link>
-            </li>
+            <>
+              <li className={`nav-item ${pathname?.startsWith('/clients') ? 'actived' : ''}`}>
+                <Link href="/clients" className="sidebar-link">
+                  <span className="icon-holder">
+                    <i className="c-green-500 ti-agenda" />
+                  </span>
+                  <span className="title">Clientes</span>
+                </Link>
+              </li>
+              <li className={`nav-item ${pathname === '/settings' ? 'actived' : ''}`}>
+                <Link href="/settings" className="sidebar-link">
+                  <span className="icon-holder">
+                    <i className="c-teal-500 ti-settings" />
+                  </span>
+                  <span className="title">Configuración</span>
+                </Link>
+              </li>
+            </>
           )}
           <li className="nav-item">
             <a className="sidebar-link" href="https://dashboardpack.com/?utm_source=adminator&utm_medium=sidebar&utm_campaign=go_pro" target="_blank" rel="noopener noreferrer">

@@ -1,6 +1,6 @@
 /**
- * Plantillas de correo con logo y nombre de empresa.
- * Las URLs de logo deben ser absolutas para que funcionen en clientes de correo.
+ * Email templates with logo and company name.
+ * Logo URLs must be absolute to work in email clients.
  */
 
 export function buildPasswordResetEmail(options: {

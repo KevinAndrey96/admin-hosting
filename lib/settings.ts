@@ -3,6 +3,8 @@ import { prisma } from './prisma';
 const DEFAULTS: Record<string, string> = {
   company_name: 'Adminator',
   logo_url: '/assets/static/images/logo.svg',
+  primary_color: '#6366f1',
+  secondary_color: '#64748b',
 };
 
 export type SettingsMap = Record<string, string>;

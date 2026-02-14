@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
         )}
 
         {success ? (
-          <div className="alert alert-success mB-20" role="alert">
+          <div className="alert alert-success mB-20 ta-c" role="alert">
             Si el correo existe en nuestra base de datos, recibirás un enlace para restablecer tu
             contraseña. Revisa tu bandeja de entrada y spam.
           </div>

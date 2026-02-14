@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import { useSettings } from '../hooks/useSettings';
 
 export default function AdminLayout({
   children,
@@ -11,6 +12,8 @@ export default function AdminLayout({
   children: React.ReactNode;
   hideFooter?: boolean;
 }) {
+  const { companyName } = useSettings();
+
   useEffect(() => {
     // Load Bootstrap JS for dropdowns
     const script = document.createElement('script');
@@ -34,7 +37,7 @@ export default function AdminLayout({
         </main>
         {!hideFooter && (
           <footer className="bdT ta-c p-30 lh-0 fsz-sm c-grey-600">
-            <span>Copyright © {new Date().getFullYear()} Admin Panel. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} {companyName}. Todos los derechos reservados.</span>
           </footer>
         )}
       </div>

@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 const PROTECTED_PATHS = [
   '/dashboard',
   '/profile',
+  '/clients',
   '/settings',
   '/email',
   '/compose',
@@ -19,7 +20,7 @@ const PROTECTED_PATHS = [
   '/error-500',
 ];
 
-const ADMIN_ONLY_PATHS = ['/settings'];
+const ADMIN_ONLY_PATHS = ['/settings', '/clients'];
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'));

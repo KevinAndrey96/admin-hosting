@@ -28,11 +28,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const allowedKeys = ['company_name', 'logo_url'];
+    const allowedKeys = ['company_name', 'logo_url', 'primary_color', 'secondary_color'];
+    const hexColorKeys = ['primary_color', 'secondary_color'];
     const data: Record<string, string> = {};
     for (const key of allowedKeys) {
       if (typeof body[key] === 'string') {
-        data[key] = body[key].trim();
+        const value = body[key].trim();
+        if (hexColorKeys.includes(key)) {
+          if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+            data[key] = value;
+          }
+        } else {
+          data[key] = value;
+        }
       }
     }
 
