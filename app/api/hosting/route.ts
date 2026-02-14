@@ -7,19 +7,28 @@ function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
 }
 
+function requireAuth(session: { isLoggedIn: boolean; userId?: string }) {
+  return session.isLoggedIn && session.userId;
+}
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
     const session = await getSession(cookieStore);
 
-    if (!requireAdmin(session)) {
+    if (!requireAuth(session)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
+    const where = session.role === 'ADMIN'
+      ? {}
+      : { userID: session.userId };
+
     const hosting = await prisma.hostingService.findMany({
+      where,
       include: {
         user: { select: { fullName: true, email: true } },
-        hostingPackage: { select: { id: true, name: true, salePrice: true, currency: true } },
+        hostingPackage: { select: { id: true, name: true, colorHex: true, salePrice: true, currency: true, diskSpaceQuotaMb: true } },
         domains: { include: { domain: { select: { id: true, fqdn: true } } } },
       },
       orderBy: { createdAt: 'desc' },
@@ -32,6 +41,8 @@ export async function GET() {
       clientEmail: h.user.email,
       packageID: h.packageID,
       packageName: h.hostingPackage.name,
+      packageColorHex: h.hostingPackage.colorHex,
+      diskSpaceQuotaMb: h.hostingPackage.diskSpaceQuotaMb,
       salePrice: Number(h.hostingPackage.salePrice),
       currency: h.hostingPackage.currency,
       domainIDs: h.domains.map((hd) => hd.domain.id),

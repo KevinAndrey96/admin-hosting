@@ -14,6 +14,8 @@ type Hosting = {
   clientEmail: string;
   packageID: string;
   packageName: string;
+  packageColorHex?: string | null;
+  diskSpaceQuotaMb?: number | null;
   salePrice: number;
   currency: string;
   domainIDs: string[];
@@ -23,6 +25,30 @@ type Hosting = {
   paymentStatus: string;
   serviceStatus: string;
 };
+
+type Package = {
+  id: string;
+  name: string;
+  colorHex: string | null;
+  salePrice: number;
+  currency: string;
+  diskSpaceQuotaMb: number | null;
+  bandwidthLimitMb: number | null;
+  maxEmailAccounts: number | null;
+  maxParkedDomains: number | null;
+  maxAddonDomains: number | null;
+  includedDomains: number;
+  hostingCount?: number;
+};
+
+function fmtMb(mb: number | null): string {
+  if (mb == null) return 'Ilimitado';
+  return `${mb.toLocaleString()} MB`;
+}
+
+function fmtLimit(v: number | null | undefined): string {
+  return v != null ? v.toLocaleString() : 'Ilimitado';
+}
 
 type SortKey = 'clientName' | 'packageName' | 'username' | 'domainFqdns' | 'salePrice' | 'paymentStatus' | 'serviceStatus' | 'nextBillingDate' | '';
 type SortDir = 'asc' | 'desc';
@@ -52,12 +78,18 @@ export default function HostingPage() {
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [deleteModal, setDeleteModal] = useState<Hosting | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [contractModal, setContractModal] = useState<Package | null>(null);
+  const [requiresMigrationHelp, setRequiresMigrationHelp] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [contractSubmitting, setContractSubmitting] = useState(false);
+  const [redirectModal, setRedirectModal] = useState<{ hosting: Hosting; url: string; title: string } | null>(null);
 
   useEffect(() => {
-    if (!sessionLoading && user?.role !== 'ADMIN') {
-      router.replace('/dashboard');
+    if (!sessionLoading && !user) {
+      router.replace('/signin');
     }
-  }, [router, sessionLoading, user?.role]);
+  }, [router, sessionLoading, user]);
 
   useEffect(() => {
     const fetchHostings = async () => {
@@ -75,10 +107,35 @@ export default function HostingPage() {
       }
     };
 
-    if (user?.role === 'ADMIN') {
+    if (user) {
       fetchHostings();
     }
-  }, [user?.role]);
+  }, [user]);
+
+  useEffect(() => {
+    if (!redirectModal) return;
+    const t = setTimeout(() => {
+      window.open(redirectModal.url, '_blank');
+      setRedirectModal(null);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [redirectModal]);
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+        const res = await fetch(`${basePath}/api/packages`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setPackages(data);
+        }
+      } catch {
+        setPackages([]);
+      }
+    };
+    if (user) fetchPackages();
+  }, [user]);
 
   const filteredData = useMemo(() => {
     if (!search.trim()) return hostings;
@@ -90,7 +147,6 @@ export default function HostingPage() {
         h.packageName?.toLowerCase().includes(q) ||
         h.username.toLowerCase().includes(q) ||
         (h.domainFqdns?.some((f) => f.toLowerCase().includes(q))) ||
-        (h.planName?.toLowerCase().includes(q)) ||
         (PAYMENT_LABELS[h.paymentStatus]?.toLowerCase().includes(q)) ||
         (SERVICE_LABELS[h.serviceStatus]?.toLowerCase().includes(q))
     );
@@ -166,7 +222,7 @@ export default function HostingPage() {
     )
   );
 
-  if (sessionLoading || user?.role !== 'ADMIN') {
+  if (sessionLoading || !user) {
     return null;
   }
 
@@ -177,13 +233,124 @@ export default function HostingPage() {
           <div className="col-12 d-f jc-sb ai-c">
             <div>
               <h4 className="m-0 c-grey-900">Hosting</h4>
-              <p className="c-grey-700 fsz-sm mT-5">Gestiona los planes de hosting de tus clientes</p>
+              <p className="c-grey-700 fsz-sm mT-5">
+                {user?.role === 'ADMIN' ? 'Gestiona los planes de hosting de tus clientes' : 'Mis servidores'}
+              </p>
             </div>
-            <Link href="/hosting/new" className="btn btn-primary">
-              <i className="ti-plus mR-5" />
-              Nuevo hosting
-            </Link>
+            {user?.role === 'ADMIN' && (
+              <Link href="/hosting/new" className="btn btn-primary">
+                <i className="ti-plus mR-5" />
+                Nuevo hosting
+              </Link>
+            )}
           </div>
+        </div>
+
+        <div className="mB-20">
+          <h5 className="m-0 mB-10 c-grey-900 fw-600">
+            Planes de hosting disponibles
+          </h5>
+          <p className="m-0 mB-20 c-grey-600 fsz-sm">
+            Almacenamiento, ancho de banda y correos incluidos. Elige el plan que mejor se adapte a tu proyecto.
+          </p>
+          {packages.length === 0 ? (
+            <div className="p-20 ta-c c-grey-600 fsz-sm bd bgc-white bdrs-3">Cargando planes...</div>
+          ) : (
+            <div className="d-f fxw-w gap-3">
+              {[...packages].sort((a, b) => a.salePrice - b.salePrice).map((p) => (
+                <div
+                  key={p.id}
+                  className="bd bgc-white bdrs-3 ov-h"
+                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)', minWidth: 220, flex: '1 1 220px', maxWidth: 320 }}
+                >
+                  <div
+                    className="ta-c p-20"
+                    style={{ backgroundColor: p.colorHex || '#6c757d' }}
+                  >
+                    <h3 className="m-0 c-white fw-500 fsz-md">{p.name}</h3>
+                  </div>
+                  <div className="p-20">
+                    <ul className="m-0 p-0" style={{ listStyle: 'none' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-wallet c-grey-600" style={{ fontSize: 14 }} />
+                        {p.currency} {p.salePrice.toLocaleString()}/año
+                      </li>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-harddrive c-grey-600" style={{ fontSize: 14 }} />
+                        {fmtMb(p.diskSpaceQuotaMb)} disco
+                      </li>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-pulse c-grey-600" style={{ fontSize: 14 }} />
+                        {fmtMb(p.bandwidthLimitMb)} de banda
+                      </li>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-email c-grey-600" style={{ fontSize: 14 }} />
+                        {fmtLimit(p.maxEmailAccounts)} cuentas email
+                      </li>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-world c-grey-600" style={{ fontSize: 14 }} />
+                        {p.maxAddonDomains != null ? `${p.maxAddonDomains.toLocaleString()} dominios adicionales` : 'Dominios ilimitados'}
+                      </li>
+                      <li className={`c-grey-700 fsz-sm p-10 d-f ai-c gap-2 ${p.includedDomains === 1 ? 'fw-600' : ''}`} style={p.includedDomains === 1 ? { backgroundColor: 'rgba(255,193,7,0.12)', borderRadius: 4 } : undefined}>
+                        {p.includedDomains === 1 ? (
+                          <i className="ti-star c-amber-500" style={{ fontSize: 14 }} />
+                        ) : (
+                          <i className="ti-gift c-grey-600" style={{ fontSize: 14 }} />
+                        )}
+                        {p.includedDomains} dominio{p.includedDomains !== 1 ? 's' : ''} incluido{p.includedDomains !== 1 ? 's' : ''}
+                      </li>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-pencil c-grey-600" style={{ fontSize: 14 }} />
+                        Gestor de WordPress incluido
+                      </li>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-package c-grey-600" style={{ fontSize: 14 }} />
+                        PHP, Node.js, Python y Ruby
+                      </li>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-bar-chart c-grey-600" style={{ fontSize: 14 }} />
+                        Métricas de visitantes incluidas
+                      </li>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <i className="ti-shield c-grey-600" style={{ fontSize: 14 }} />
+                        Antivirus y protección
+                      </li>
+                      <li className="c-grey-700 fsz-sm p-10 d-f ai-c gap-2">
+                        <i className="ti-arrow-right c-grey-600" style={{ fontSize: 14 }} />
+                        Migración gratuita incluida
+                      </li>
+                    </ul>
+                    <div className="d-f gap-2 mT-15 fxw-w">
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ color: '#fff', flex: '1 1 140px', padding: '10px 16px' }}
+                        onClick={() => {
+                          setContractModal(p);
+                          setRequiresMigrationHelp(false);
+                          setTermsAccepted(false);
+                        }}
+                      >
+                        Lo quiero
+                      </button>
+                      {user?.role === 'ADMIN' && (
+                        <>
+                          <Link href={`/packages/${p.id}`} className="btn btn-sm btn-outline-secondary" style={{ flex: 1 }}>
+                            <i className="ti-eye mR-5" />
+                            Ver
+                          </Link>
+                          <Link href={`/packages/${p.id}/edit`} className="btn btn-sm btn-outline-secondary" style={{ flex: 1 }}>
+                            <i className="ti-pencil mR-5" />
+                            Editar
+                          </Link>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="bd bgc-white bdrs-3 p-20" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
@@ -191,10 +358,14 @@ export default function HostingPage() {
             <div className="p-20 ta-c c-grey-700">Cargando...</div>
           ) : hostings.length === 0 ? (
             <div className="p-40 ta-c c-grey-700">
-              <p className="mB-10">No hay hosting registrado.</p>
-              <Link href="/hosting/new" className="btn btn-primary">
-                Crear primer hosting
-              </Link>
+              <p className="mB-10">
+                {user?.role === 'ADMIN' ? 'No hay hosting registrado.' : 'No tienes servidores de hosting.'}
+              </p>
+              {user?.role === 'ADMIN' && (
+                <Link href="/hosting/new" className="btn btn-primary">
+                  Crear primer hosting
+                </Link>
+              )}
             </div>
           ) : (
             <>
@@ -238,14 +409,16 @@ export default function HostingPage() {
                 <table className="table table-striped table-hover table-bordered">
                   <thead>
                     <tr>
-                      <th
-                        className="c-grey-800 cur-p"
-                        style={{ minWidth: 140 }}
-                        onClick={() => handleSort('clientName')}
-                      >
-                        Cliente
-                        <SortIcon col="clientName" />
-                      </th>
+                      {user?.role === 'ADMIN' && (
+                        <th
+                          className="c-grey-800 cur-p"
+                          style={{ minWidth: 140 }}
+                          onClick={() => handleSort('clientName')}
+                        >
+                          Cliente
+                          <SortIcon col="clientName" />
+                        </th>
+                      )}
                       <th
                         className="c-grey-800 cur-p"
                         style={{ minWidth: 100 }}
@@ -269,6 +442,9 @@ export default function HostingPage() {
                       >
                         Dominios
                         <SortIcon col="domainFqdns" />
+                      </th>
+                      <th className="c-grey-800 ta-e" style={{ minWidth: 90 }}>
+                        Disco
                       </th>
                       <th
                         className="c-grey-800 cur-p ta-e"
@@ -302,23 +478,62 @@ export default function HostingPage() {
                         Servicio
                         <SortIcon col="serviceStatus" />
                       </th>
-                      <th className="ta-e c-grey-800" style={{ minWidth: 90 }}>
-                        Acciones
+                      <th className="ta-c c-grey-800" style={{ minWidth: 120 }}>
+                        Acceso
                       </th>
+                      {user?.role === 'ADMIN' && (
+                        <th className="ta-e c-grey-800" style={{ minWidth: 90 }}>
+                          Acciones
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedData.map((h) => (
                       <tr key={h.id}>
+                        {user?.role === 'ADMIN' && (
+                          <td className="c-grey-800">
+                            <Link href={`/clients/${h.userID}/edit`} className="td-n c-grey-800">
+                              {h.clientName}
+                            </Link>
+                          </td>
+                        )}
                         <td className="c-grey-800">
-                          <Link href={`/clients/${h.userID}/edit`} className="td-n c-grey-800">
-                            {h.clientName}
-                          </Link>
+                          <span
+                            className="d-ib p-5 bdrs-3 fsz-sm fw-500"
+                            style={{
+                              backgroundColor: (h.packageColorHex || '#6c757d') + '22',
+                              color: h.packageColorHex || '#495057',
+                              borderLeft: `3px solid ${h.packageColorHex || '#6c757d'}`,
+                            }}
+                          >
+                            {h.packageName}
+                          </span>
                         </td>
-                        <td className="c-grey-800">{h.packageName}</td>
                         <td className="fw-500 c-grey-900">{h.username}</td>
                         <td className="c-grey-800">
-                          {h.domainFqdns?.length ? h.domainFqdns.join(', ') : '—'}
+                          {h.domainFqdns?.length ? (
+                            <>
+                              {h.domainFqdns.map((fqdn, i) => (
+                                <span key={fqdn}>
+                                  {i > 0 && ', '}
+                                  <a
+                                    href={`https://${fqdn}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="c-primary td-n fsz-sm"
+                                  >
+                                    {fqdn}
+                                  </a>
+                                </span>
+                              ))}
+                            </>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="c-grey-800 ta-e">
+                          {fmtMb(h.diskSpaceQuotaMb ?? null)}
                         </td>
                         <td className="c-grey-800 ta-e">
                           {h.currency} {h.salePrice.toLocaleString()}
@@ -360,26 +575,56 @@ export default function HostingPage() {
                             {SERVICE_LABELS[h.serviceStatus] ?? h.serviceStatus}
                           </span>
                         </td>
-                        <td className="ta-e">
-                          <div className="d-f gap-2 jc-e">
-                            <Link
-                              href={`/hosting/${h.id}/edit`}
-                              className="btn btn-sm btn-primary"
-                              style={{ color: '#fff' }}
-                              title="Editar"
-                            >
-                              <i className="ti-pencil" />
-                            </Link>
+                        <td className="ta-c">
+                          <div className="d-f gap-2 jc-c fxw-w">
                             <button
                               type="button"
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => setDeleteModal(h)}
-                              title="Eliminar"
+                              className="btn btn-sm btn-outline-primary p-8 m-0"
+                              onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/cpanel', title: 'cPanel' })}
+                              title="Acceder a cPanel"
                             >
-                              <i className="ti-trash" />
+                              <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/cpanel.png`} alt="cPanel" width={20} height={20} />
                             </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-secondary p-8 m-0"
+                              onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/webmail', title: 'Webmail' })}
+                              title="Acceder a Webmail"
+                            >
+                              <i className="ti-email" style={{ fontSize: 18 }} />
+                            </button>
+                            <Link
+                              href={`/pago?tipo=renovar-hosting&hostingId=${encodeURIComponent(h.id)}`}
+                              className="btn btn-sm btn-success p-8 m-0"
+                              style={{ color: '#fff' }}
+                              title="Renovar ahora"
+                            >
+                              <i className="ti-wallet" style={{ fontSize: 18 }} />
+                            </Link>
                           </div>
                         </td>
+                        {user?.role === 'ADMIN' && (
+                          <td className="ta-e">
+                            <div className="d-f gap-2 jc-e">
+                              <Link
+                                href={`/hosting/${h.id}/edit`}
+                                className="btn btn-sm btn-primary"
+                                style={{ color: '#fff' }}
+                                title="Editar"
+                              >
+                                <i className="ti-pencil" />
+                              </Link>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => setDeleteModal(h)}
+                                title="Eliminar"
+                              >
+                                <i className="ti-trash" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -417,6 +662,209 @@ export default function HostingPage() {
           )}
         </div>
       </div>
+
+      {contractModal && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          tabIndex={-1}
+          role="dialog"
+        >
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content">
+              <div className="modal-header" style={{ backgroundColor: contractModal.colorHex || '#6c757d', color: '#fff' }}>
+                <h5 className="modal-title">Contratar plan {contractModal.name}</h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  aria-label="Cerrar"
+                  onClick={() => !contractSubmitting && setContractModal(null)}
+                  disabled={contractSubmitting}
+                />
+              </div>
+              <div className="modal-body">
+                <h6 className="fw-600 mB-10">Resumen del plan</h6>
+                <ul className="fsz-sm c-grey-700 mB-15" style={{ listStyle: 'disc', paddingLeft: 20 }}>
+                  <li>{contractModal.currency} {contractModal.salePrice.toLocaleString()}/año</li>
+                  <li>{fmtMb(contractModal.diskSpaceQuotaMb)} disco · {fmtMb(contractModal.bandwidthLimitMb)} de banda</li>
+                  <li>{fmtLimit(contractModal.maxEmailAccounts)} cuentas email</li>
+                  <li>{contractModal.maxAddonDomains != null ? `${contractModal.maxAddonDomains.toLocaleString()} dominios adicionales` : 'Dominios ilimitados'}</li>
+                  <li>{contractModal.includedDomains} dominio{contractModal.includedDomains !== 1 ? 's' : ''} incluido{contractModal.includedDomains !== 1 ? 's' : ''}</li>
+                  <li>Gestor WordPress · PHP, Node.js, Python, Ruby</li>
+                  <li>Métricas de visitantes · Antivirus · Migración gratuita</li>
+                </ul>
+                <p className="fsz-sm c-grey-700 mB-15">
+                  Este plan incluye <strong>{fmtMb(contractModal.diskSpaceQuotaMb)} de capacidad</strong>. Te recomendamos tener un estimado del peso actual de tu web para asegurarte de que el plan cubre tus necesidades.
+                </p>
+                <div className="form-check mB-15">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="migrationHelp"
+                    checked={requiresMigrationHelp}
+                    onChange={(e) => setRequiresMigrationHelp(e.target.checked)}
+                    disabled={contractSubmitting}
+                  />
+                  <label className="form-check-label fsz-sm" htmlFor="migrationHelp">
+                    ¿Requiere asistencia durante la migración?
+                  </label>
+                </div>
+                <div className="form-check mB-15">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="termsAccepted"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    disabled={contractSubmitting}
+                  />
+                  <label className="form-check-label fsz-sm" htmlFor="termsAccepted">
+                    He leído los{' '}
+                    <Link href="/terminos-y-condiciones" target="_blank" rel="noopener noreferrer" className="c-primary td-u">
+                      términos y condiciones
+                    </Link>
+                  </label>
+                </div>
+                <p className="fsz-sm c-grey-700 mB-10">
+                  Precio: <strong>{contractModal.currency} {contractModal.salePrice.toLocaleString()}/año</strong>. Al confirmar, serás redirigido a la pasarela de pago.
+                </p>
+                <div className="p-15 bdrs-3 mB-15" style={{ backgroundColor: 'rgba(32,201,151,0.12)', border: '1px solid rgba(32,201,151,0.3)' }}>
+                  <p className="m-0 fsz-sm c-grey-800">
+                    <i className="ti-info-alt mR-5" />
+                    No te preocupes: puedes subir la categoría de tu servidor cuando quieras y solo pagas la diferencia.
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer d-f gap-2 fxw-w">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setContractModal(null)}
+                  disabled={contractSubmitting}
+                >
+                  Cancelar
+                </button>
+                <Link
+                  href={`/pago?tipo=contratar-hosting&packageId=${encodeURIComponent(contractModal.id)}`}
+                  className="btn btn-success d-f ai-c gap-2"
+                  style={{ color: '#fff' }}
+                  onClick={() => setContractModal(null)}
+                >
+                  <i className="ti-wallet" />
+                  Pagar ahora
+                </Link>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ color: '#fff' }}
+                  disabled={!termsAccepted || contractSubmitting}
+                  onClick={async () => {
+                    if (!termsAccepted || !contractModal) return;
+                    setContractSubmitting(true);
+                    try {
+                      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+                      const planSummary = [
+                        `${contractModal.currency} ${contractModal.salePrice.toLocaleString()}/año`,
+                        `${fmtMb(contractModal.diskSpaceQuotaMb)} disco`,
+                        `${fmtMb(contractModal.bandwidthLimitMb)} de banda`,
+                        `${fmtLimit(contractModal.maxEmailAccounts)} cuentas email`,
+                        contractModal.maxAddonDomains != null ? `${contractModal.maxAddonDomains.toLocaleString()} dominios adicionales` : 'Dominios ilimitados',
+                        `${contractModal.includedDomains} dominio(s) incluido(s)`,
+                        'Gestor WordPress, PHP, Node.js, Python, Ruby',
+                        'Métricas, antivirus, migración gratuita',
+                      ].join(' · ');
+                      const res = await fetch(`${basePath}/api/hosting/request-service`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                          packageID: contractModal.id,
+                          packageName: contractModal.name,
+                          salePrice: contractModal.salePrice,
+                          currency: contractModal.currency,
+                          requiresMigrationHelp,
+                          planSummary,
+                        }),
+                      });
+                      const data = await res.json().catch(() => ({}));
+                      if (!res.ok) {
+                        alert(data.error || 'Error al enviar la solicitud');
+                        return;
+                      }
+                      alert(data.message || 'Solicitud enviada correctamente.');
+                      setContractModal(null);
+                    } catch {
+                      alert('Error de conexión');
+                    } finally {
+                      setContractSubmitting(false);
+                    }
+                  }}
+                >
+                  {contractSubmitting ? 'Enviando...' : 'Contratar servicio'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {redirectModal && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          tabIndex={-1}
+          role="dialog"
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div
+                className="modal-header d-f ai-c gap-2"
+                style={{
+                  backgroundColor: redirectModal.title === 'cPanel' ? '#ff6c2c' : '#0d6efd',
+                  color: '#fff',
+                }}
+              >
+                {redirectModal.title === 'cPanel' ? (
+                  <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/cpanel.png`} alt="cPanel" width={28} height={28} />
+                ) : (
+                  <i className="ti-email" style={{ fontSize: 24 }} />
+                )}
+                <h5 className="modal-title m-0">Acceso a {redirectModal.title}</h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white ms-auto"
+                  aria-label="Cerrar"
+                  onClick={() => setRedirectModal(null)}
+                />
+              </div>
+              <div className="modal-body ta-c p-30">
+                <p className="c-grey-800 fsz-md mB-15">
+                  A continuación será redirigido al inicio de sesión de {redirectModal.title}.
+                </p>
+                <div className="ta-l mB-20 p-15 bdrs-3" style={{ backgroundColor: 'rgba(0,0,0,0.04)' }}>
+                  <p className="c-grey-800 fsz-sm mB-5 m-0">
+                    Correo: <strong className="c-grey-900">
+                      {redirectModal.hosting.username}@{redirectModal.hosting.domainFqdns?.[0] || 'tudominio.com'}
+                    </strong>
+                  </p>
+                  <p className="c-grey-800 fsz-sm m-0">
+                    Contraseña: <strong className="c-grey-900">tu contraseña de correo</strong>
+                  </p>
+                </div>
+                <p className="c-grey-600 fsz-xs mB-20 m-0">
+                  Puedes restablecer estas credenciales desde el cPanel cuando quieras.
+                </p>
+                <div className="d-f jc-c ai-c gap-2">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Cargando...</span>
+                  </div>
+                  <span className="c-grey-600 fsz-sm">Redirigiendo en 5 segundos...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteModal && (
         <div

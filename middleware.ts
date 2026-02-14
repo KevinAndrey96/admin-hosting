@@ -4,7 +4,11 @@ import type { NextRequest } from 'next/server';
 const PROTECTED_PATHS = [
   '/dashboard',
   '/profile',
+  '/pago',
   '/clients',
+  '/domains',
+  '/hosting',
+  '/packages',
   '/settings',
   '/email',
   '/compose',

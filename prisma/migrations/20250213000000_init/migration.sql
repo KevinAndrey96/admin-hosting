@@ -73,7 +73,6 @@ CREATE TABLE `domains` (
     `renewal_date` DATETIME(3) NOT NULL,
     `next_billing_date` DATETIME(3) NOT NULL,
     `payment_status` ENUM('PENDING', 'PAID', 'OVERDUE', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
-    `service_status` ENUM('ACTIVE', 'AT_RISK', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE',
     `transfer_lock` BOOLEAN NOT NULL DEFAULT true,
     `health_status` ENUM('UP', 'DOWN', 'UNKNOWN') NOT NULL DEFAULT 'UNKNOWN',
     `nameserver_1` VARCHAR(191) NULL,

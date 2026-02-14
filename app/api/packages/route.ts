@@ -7,6 +7,10 @@ function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
 }
 
+function requireAuth(session: { isLoggedIn: boolean; userId?: string }) {
+  return session.isLoggedIn && session.userId;
+}
+
 // Converts "unlimited", "", null, undefined → null; number → number
 function parseLimit(v: unknown): number | null {
   if (v === 'unlimited' || v === '' || v == null) return null;
@@ -14,23 +18,11 @@ function parseLimit(v: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
-function toPackageResponse(p: {
-  id: string;
-  name: string;
-  salePrice: unknown;
-  currency: string;
-  diskSpaceQuotaMb: number | null;
-  bandwidthLimitMb: number | null;
-  maxEmailAccounts: number | null;
-  maxParkedDomains: number | null;
-  maxAddonDomains: number | null;
-  includedDomains: number;
-  createdAt: Date;
-  _count?: { hosting: number };
-}) {
+function toPackageResponse(p: Record<string, unknown> & { id: string; name: string; salePrice: unknown; currency: string; diskSpaceQuotaMb: number | null; bandwidthLimitMb: number | null; maxEmailAccounts: number | null; maxParkedDomains: number | null; maxAddonDomains: number | null; includedDomains: number; createdAt: Date }) {
   return {
     id: p.id,
     name: p.name,
+    colorHex: (p.colorHex as string | null | undefined) ?? null,
     salePrice: Number(p.salePrice),
     currency: p.currency,
     diskSpaceQuotaMb: p.diskSpaceQuotaMb,
@@ -49,7 +41,7 @@ export async function GET() {
     const cookieStore = await cookies();
     const session = await getSession(cookieStore);
 
-    if (!requireAdmin(session)) {
+    if (!requireAuth(session)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
@@ -124,9 +116,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const colorHex = body.colorHex?.trim();
+    const colorHexVal = colorHex && /^#[0-9A-Fa-f]{6}$/.test(colorHex) ? colorHex : null;
     const pkg = await prisma.hostingPackage.create({
       data: {
         name: nameNorm,
+        ...(colorHexVal != null && { colorHex: colorHexVal }),
         salePrice: salePriceNum,
         currency: currency?.trim() || 'COP',
         diskSpaceQuotaMb: parseLimit(diskSpaceQuotaMb),

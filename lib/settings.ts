@@ -5,6 +5,11 @@ const DEFAULTS: Record<string, string> = {
   logo_url: '/assets/static/images/logo.svg',
   primary_color: '#6366f1',
   secondary_color: '#64748b',
+  daviplata_number: '',
+  nequi_number: '',
+  breb_key: '',
+  bancolombia_account: '',
+  mercadopago_payment_link: '',
 };
 
 export type SettingsMap = Record<string, string>;

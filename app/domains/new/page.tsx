@@ -19,7 +19,6 @@ export default function NewDomainPage() {
   const [currency, setCurrency] = useState('COP');
   const [renewalDate, setRenewalDate] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('PENDING');
-  const [serviceStatus, setServiceStatus] = useState('ACTIVE');
   const [transferLock, setTransferLock] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -84,7 +83,6 @@ export default function NewDomainPage() {
           currency: currency || 'COP',
           renewalDate: renewalDate || undefined,
           paymentStatus,
-          serviceStatus,
           transferLock,
         }),
       });
@@ -244,22 +242,6 @@ export default function NewDomainPage() {
                     <option value="PAID">Pagado</option>
                     <option value="OVERDUE">Vencido</option>
                     <option value="CANCELLED">Cancelado</option>
-                  </select>
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label htmlFor="serviceStatus" className="form-label fw-500">
-                    Estado servicio
-                  </label>
-                  <select
-                    className="form-select"
-                    id="serviceStatus"
-                    value={serviceStatus}
-                    onChange={(e) => setServiceStatus(e.target.value)}
-                    disabled={saving}
-                  >
-                    <option value="ACTIVE">Activo</option>
-                    <option value="AT_RISK">En riesgo</option>
-                    <option value="EXPIRED">Expirado</option>
                   </select>
                 </div>
               </div>

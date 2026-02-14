@@ -7,16 +7,25 @@ function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
 }
 
+function requireAuth(session: { isLoggedIn: boolean; userId?: string }) {
+  return session.isLoggedIn && session.userId;
+}
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
     const session = await getSession(cookieStore);
 
-    if (!requireAdmin(session)) {
+    if (!requireAuth(session)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
+    const where = session.role === 'ADMIN'
+      ? {}
+      : { userID: session.userId };
+
     const domains = await prisma.domain.findMany({
+      where,
       include: {
         user: { select: { fullName: true, email: true } },
       },
@@ -36,7 +45,6 @@ export async function GET() {
       renewalDate: d.renewalDate,
       nextBillingDate: d.nextBillingDate,
       paymentStatus: d.paymentStatus,
-      serviceStatus: d.serviceStatus,
       transferLock: d.transferLock,
       healthStatus: d.healthStatus,
       createdAt: d.createdAt,
@@ -70,7 +78,6 @@ export async function POST(request: NextRequest) {
       currency,
       renewalDate,
       paymentStatus,
-      serviceStatus,
       transferLock,
     } = body;
 
@@ -139,9 +146,6 @@ export async function POST(request: NextRequest) {
         paymentStatus: paymentStatus && ['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'].includes(paymentStatus)
           ? paymentStatus
           : 'PENDING',
-        serviceStatus: serviceStatus && ['ACTIVE', 'AT_RISK', 'EXPIRED'].includes(serviceStatus)
-          ? serviceStatus
-          : 'ACTIVE',
         transferLock: transferLock !== false,
       },
       include: {
@@ -159,7 +163,6 @@ export async function POST(request: NextRequest) {
         salePrice: Number(domain.salePrice),
         currency: domain.currency,
         paymentStatus: domain.paymentStatus,
-        serviceStatus: domain.serviceStatus,
         nextBillingDate: domain.nextBillingDate,
         message: 'Dominio creado correctamente.',
       },

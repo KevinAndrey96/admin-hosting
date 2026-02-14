@@ -84,38 +84,48 @@ export default function Sidebar() {
               <span className="title">Mi cuenta</span>
             </Link>
           </li>
+          <li className={`nav-item ${pathname === '/pago' ? 'actived' : ''}`}>
+            <Link href="/pago" className="sidebar-link">
+              <span className="icon-holder">
+                <i className="c-green-500 ti-wallet" />
+              </span>
+              <span className="title">Pago</span>
+            </Link>
+          </li>
+          {user?.role === 'ADMIN' && (
+            <li className={`nav-item ${pathname?.startsWith('/clients') ? 'actived' : ''}`}>
+              <Link href="/clients" className="sidebar-link">
+                <span className="icon-holder">
+                  <i className="c-green-500 ti-agenda" />
+                </span>
+                <span className="title">Clientes</span>
+              </Link>
+            </li>
+          )}
+          <li className={`nav-item ${pathname?.startsWith('/domains') ? 'actived' : ''}`}>
+            <Link href="/domains" className="sidebar-link">
+              <span className="icon-holder">
+                <i className="c-cyan-500 ti-world" />
+              </span>
+              <span className="title">Dominios</span>
+            </Link>
+          </li>
+          <li className={`nav-item ${pathname?.startsWith('/hosting') ? 'actived' : ''}`}>
+            <Link href="/hosting" className="sidebar-link">
+              <span className="icon-holder">
+                <i className="c-orange-500 ti-server" />
+              </span>
+              <span className="title">Hosting</span>
+            </Link>
+          </li>
           {user?.role === 'ADMIN' && (
             <>
-              <li className={`nav-item ${pathname?.startsWith('/clients') ? 'actived' : ''}`}>
-                <Link href="/clients" className="sidebar-link">
-                  <span className="icon-holder">
-                    <i className="c-green-500 ti-agenda" />
-                  </span>
-                  <span className="title">Clientes</span>
-                </Link>
-              </li>
-              <li className={`nav-item ${pathname?.startsWith('/domains') ? 'actived' : ''}`}>
-                <Link href="/domains" className="sidebar-link">
-                  <span className="icon-holder">
-                    <i className="c-cyan-500 ti-world" />
-                  </span>
-                  <span className="title">Dominios</span>
-                </Link>
-              </li>
               <li className={`nav-item ${pathname?.startsWith('/packages') ? 'actived' : ''}`}>
                 <Link href="/packages" className="sidebar-link">
                   <span className="icon-holder">
                     <i className="c-amber-500 ti-package" />
                   </span>
                   <span className="title">Paquetes</span>
-                </Link>
-              </li>
-              <li className={`nav-item ${pathname?.startsWith('/hosting') ? 'actived' : ''}`}>
-                <Link href="/hosting" className="sidebar-link">
-                  <span className="icon-holder">
-                    <i className="c-orange-500 ti-server" />
-                  </span>
-                  <span className="title">Hosting</span>
                 </Link>
               </li>
               <li className={`nav-item ${pathname === '/settings' ? 'actived' : ''}`}>

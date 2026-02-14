@@ -103,18 +103,17 @@ export default function ProfilePage() {
 
   return (
     <AdminLayout>
-      <div className="container-fluid">
-        <div className="row mB-20">
-          <div className="col-12">
-            <h4 className="m-0">Mi cuenta</h4>
-            <p className="c-grey-600 fsz-sm mT-5">Tu información y configuración de seguridad</p>
+      <div className="container-fluid" style={{ background: '#fff', minHeight: '100%', padding: '24px' }}>
+        <div className="card bdrs-3" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: 'none' }}>
+          <div className="card-header bgc-white bdT-0 bdrs-3" style={{ padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+            <h4 className="m-0 c-grey-900 fw-600">Mi cuenta</h4>
+            <p className="c-grey-600 fsz-sm mT-5 mB-0">Tu información y configuración de seguridad</p>
           </div>
-        </div>
-
-        <div className="row gap-20">
-          <div className="col-md-6">
-            <div className="bd bgc-white p-20 bdrs-3">
-              <h6 className="mB-20">Información personal</h6>
+          <div className="card-body p-24">
+            <div className="row gap-20">
+              <div className="col-md-6">
+                <div className="bd p-20 bdrs-3" style={{ minHeight: 200, backgroundColor: '#f8f9fa' }}>
+                  <h6 className="mB-20 c-grey-800 fw-600">Información personal</h6>
               {profileLoading ? (
                 <p className="c-grey-600">Cargando...</p>
               ) : profile ? (
@@ -149,12 +148,12 @@ export default function ProfilePage() {
               ) : (
                 <p className="c-grey-600">No se pudo cargar la información.</p>
               )}
-            </div>
-          </div>
+                </div>
+              </div>
 
-          <div className="col-md-6">
-            <div className="bd bgc-white p-20 bdrs-3">
-              <h6 className="mB-20">Cambiar contraseña</h6>
+              <div className="col-md-6">
+                <div className="bd p-20 bdrs-3" style={{ minHeight: 200, backgroundColor: '#f8f9fa' }}>
+                  <h6 className="mB-20 c-grey-800 fw-600">Cambiar contraseña</h6>
               <form onSubmit={handleChangePassword}>
                 <div className="mb-3">
                   <label htmlFor="current-password" className="form-label">
@@ -214,6 +213,8 @@ export default function ProfilePage() {
                   {saving ? 'Actualizando...' : 'Actualizar contraseña'}
                 </button>
               </form>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -28,7 +28,17 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const allowedKeys = ['company_name', 'logo_url', 'primary_color', 'secondary_color'];
+    const allowedKeys = [
+      'company_name',
+      'logo_url',
+      'primary_color',
+      'secondary_color',
+      'daviplata_number',
+      'nequi_number',
+      'breb_key',
+      'bancolombia_account',
+      'mercadopago_payment_link',
+    ];
     const hexColorKeys = ['primary_color', 'secondary_color'];
     const data: Record<string, string> = {};
     for (const key of allowedKeys) {

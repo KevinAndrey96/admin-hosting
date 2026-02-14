@@ -141,9 +141,10 @@ export default function SignUpPage() {
               type="tel"
               className="form-control"
               id="signup-phone"
-              placeholder="+52 123 456 7890"
+              placeholder="3100000000"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              maxLength={10}
               disabled={loading}
             />
           </div>

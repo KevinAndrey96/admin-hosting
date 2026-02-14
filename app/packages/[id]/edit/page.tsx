@@ -17,6 +17,7 @@ export default function EditPackagePage() {
   const { user, loading: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
+  const [colorHex, setColorHex] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [currency, setCurrency] = useState('COP');
   const [diskSpaceQuotaMb, setDiskSpaceQuotaMb] = useState('');
@@ -40,6 +41,7 @@ export default function EditPackagePage() {
         if (res.ok) {
           const d = await res.json();
           setName(d.name || '');
+          setColorHex(d.colorHex || '');
           setSalePrice(d.salePrice != null ? String(d.salePrice) : '');
           setCurrency(d.currency || 'COP');
           setDiskSpaceQuotaMb(toStr(d.diskSpaceQuotaMb));
@@ -86,6 +88,7 @@ export default function EditPackagePage() {
       const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
       const body: Record<string, unknown> = {
         name: name.trim(),
+        colorHex: colorHex.trim() || undefined,
         salePrice: priceNum,
         currency,
         diskSpaceQuotaMb: parseLimit(diskSpaceQuotaMb),
@@ -157,9 +160,31 @@ export default function EditPackagePage() {
               <form onSubmit={handleSubmit}>
                 <h6 className="mB-15">Información básica</h6>
                 <div className="row mb-3">
-                  <div className="col-md-6">
+                  <div className="col-md-5">
                     <label className="form-label fw-500">Nombre del paquete *</label>
                     <input type="text" className="form-control" value={name} onChange={(e) => setName(e.target.value)} required disabled={saving} />
+                  </div>
+                  <div className="col-md-2">
+                    <label className="form-label fw-500">Color</label>
+                    <div className="d-f ai-c gap-2">
+                      <input
+                        type="color"
+                        className="form-control form-control-color p-1"
+                        value={colorHex || '#6c757d'}
+                        onChange={(e) => setColorHex(e.target.value)}
+                        disabled={saving}
+                        style={{ width: 40, height: 38 }}
+                      />
+                      <input
+                        type="text"
+                        className="form-control form-control-sm"
+                        value={colorHex}
+                        onChange={(e) => setColorHex(e.target.value)}
+                        placeholder="#CD7F32"
+                        disabled={saving}
+                        maxLength={7}
+                      />
+                    </div>
                   </div>
                   <div className="col-md-3">
                     <label className="form-label fw-500">Precio *</label>

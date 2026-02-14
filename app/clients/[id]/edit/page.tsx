@@ -199,11 +199,13 @@ export default function EditClientPage() {
                     Teléfono
                   </label>
                   <input
-                    type="text"
+                    type="tel"
                     className="form-control"
                     id="phone"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="3100000000"
+                    maxLength={10}
                     disabled={saving}
                   />
                 </div>

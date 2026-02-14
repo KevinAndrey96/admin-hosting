@@ -33,6 +33,7 @@ async function main() {
   const packages = loadJson<Array<{
     id: string;
     name: string;
+    colorHex?: string;
     salePrice: number;
     currency?: string;
     diskSpaceQuotaMb?: number | 'unlimited';
@@ -54,6 +55,7 @@ async function main() {
       create: {
         id: p.id,
         name: p.name,
+        colorHex: p.colorHex?.trim() || null,
         salePrice: p.salePrice,
         currency: p.currency || 'COP',
         diskSpaceQuotaMb: parseLimit(p.diskSpaceQuotaMb),
@@ -65,6 +67,7 @@ async function main() {
       },
       update: {
         name: p.name,
+        colorHex: p.colorHex?.trim() || null,
         salePrice: p.salePrice,
         currency: p.currency || 'COP',
         diskSpaceQuotaMb: parseLimit(p.diskSpaceQuotaMb),
@@ -131,8 +134,9 @@ async function main() {
     currency?: string;
     renewalDate: string;
     paymentStatus?: string;
-    serviceStatus?: string;
     transferLock?: boolean;
+    nameserver1?: string;
+    nameserver2?: string;
   }>>('domains.json');
 
   for (const d of domains) {
@@ -153,10 +157,9 @@ async function main() {
           paymentStatus: (['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'].includes(d.paymentStatus || '')
             ? (d.paymentStatus as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED')
             : d.paymentStatus === 'UNPAID' ? 'OVERDUE' : 'PENDING'),
-          serviceStatus: (['ACTIVE', 'AT_RISK', 'EXPIRED'].includes(d.serviceStatus || '')
-            ? (d.serviceStatus as 'ACTIVE' | 'AT_RISK' | 'EXPIRED')
-            : 'AT_RISK') || 'ACTIVE',
           transferLock: d.transferLock !== false,
+          nameserver1: d.nameserver1?.trim() || null,
+          nameserver2: d.nameserver2?.trim() || null,
         },
       });
       console.log(`Domain seeded: ${d.fqdn} (user: ${d.userID})`);

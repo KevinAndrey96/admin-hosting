@@ -78,6 +78,7 @@ model Setting {
 model HostingPackage {
   id                 String   @id @default(cuid())
   name               String   @map("name")
+  colorHex           String?  @map("color_hex") @db.VarChar(7)
   salePrice          Decimal  @map("sale_price") @db.Decimal(10, 2)
   currency           String   @default("COP")
   diskSpaceQuotaMb   Int?     @map("disk_space_quota_mb")     // null = unlimited
@@ -99,12 +100,6 @@ enum PaymentStatus {
   PAID
   OVERDUE
   CANCELLED
-}
-
-enum DomainServiceStatus {
-  ACTIVE
-  AT_RISK
-  EXPIRED
 }
 
 enum HostingServiceStatus {
@@ -134,10 +129,9 @@ model Domain {
   renewalDate    DateTime            @map("renewal_date")
   nextBillingDate DateTime           @map("next_billing_date")
   paymentStatus  PaymentStatus       @default(PENDING) @map("payment_status")
-  serviceStatus  DomainServiceStatus @default(ACTIVE) @map("service_status")
   transferLock   Boolean             @default(true) @map("transfer_lock")
   healthStatus   HealthStatus        @default(UNKNOWN) @map("health_status")
-  nameserver1    String?             @map("nameserver_1")  // IPv4, max 2 per domain
+  nameserver1    String?             @map("nameserver_1")
   nameserver2    String?             @map("nameserver_2")
   registrantName  String?            @map("registrant_name")
   registrantOrg   String?            @map("registrant_org")

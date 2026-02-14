@@ -14,6 +14,11 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#6366f1');
   const [secondaryColor, setSecondaryColor] = useState('#64748b');
+  const [numeroDaviplata, setNumeroDaviplata] = useState('');
+  const [numeroNequi, setNumeroNequi] = useState('');
+  const [llaveBreB, setLlaveBreB] = useState('');
+  const [cuentaBancolombia, setCuentaBancolombia] = useState('');
+  const [linkPagoMercadopago, setLinkPagoMercadopago] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -23,6 +28,11 @@ export default function SettingsPage() {
       setLogoUrl(settings.logo_url ?? '');
       setPrimaryColor(settings.primary_color ?? '#6366f1');
       setSecondaryColor(settings.secondary_color ?? '#64748b');
+      setNumeroDaviplata(settings.daviplata_number ?? '');
+      setNumeroNequi(settings.nequi_number ?? '');
+      setLlaveBreB(settings.breb_key ?? '');
+      setCuentaBancolombia(settings.bancolombia_account ?? '');
+      setLinkPagoMercadopago(settings.mercadopago_payment_link ?? '');
     }
   }, [settings]);
 
@@ -52,6 +62,11 @@ export default function SettingsPage() {
         logo_url: logoUrl,
         primary_color: primaryColor,
         secondary_color: secondaryColor,
+        daviplata_number: numeroDaviplata,
+        nequi_number: numeroNequi,
+        breb_key: llaveBreB,
+        bancolombia_account: cuentaBancolombia,
+        mercadopago_payment_link: linkPagoMercadopago,
       });
       setMessage({ type: 'success', text: 'Configuración guardada correctamente.' });
     } catch {
@@ -108,6 +123,93 @@ export default function SettingsPage() {
                     />
                     <div className="form-text">
                       Ruta relativa (ej: /assets/static/images/logo.svg) o URL absoluta (https://...)
+                    </div>
+                  </div>
+                  <h6 className="mB-15 mT-25">Datos de pago</h6>
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label htmlFor="daviplata_number" className="form-label">
+                          Número Daviplata
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="daviplata_number"
+                          value={numeroDaviplata}
+                          onChange={(e) => setNumeroDaviplata(e.target.value)}
+                          placeholder="Ej: 3185563342"
+                          disabled={saving}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label htmlFor="nequi_number" className="form-label">
+                          Número Nequi
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="nequi_number"
+                          value={numeroNequi}
+                          onChange={(e) => setNumeroNequi(e.target.value)}
+                          placeholder="Ej: 3185563342"
+                          disabled={saving}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label htmlFor="bancolombia_account" className="form-label">
+                          Cuenta Bancolombia
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="bancolombia_account"
+                          value={cuentaBancolombia}
+                          onChange={(e) => setCuentaBancolombia(e.target.value)}
+                          placeholder="Ej: 3185563342"
+                          disabled={saving}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label htmlFor="breb_key" className="form-label">
+                          Llave Bre-B
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="breb_key"
+                          value={llaveBreB}
+                          onChange={(e) => setLlaveBreB(e.target.value)}
+                          placeholder="Ej: 3185563342"
+                          disabled={saving}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-12">
+                      <div className="mb-3">
+                        <label htmlFor="mercadopago_payment_link" className="form-label">
+                          Link de pago MercadoPago
+                        </label>
+                        <input
+                          type="url"
+                          className="form-control"
+                          id="mercadopago_payment_link"
+                          value={linkPagoMercadopago}
+                          onChange={(e) => setLinkPagoMercadopago(e.target.value)}
+                          placeholder="https://..."
+                          disabled={saving}
+                        />
+                      </div>
                     </div>
                   </div>
                   <h6 className="mB-15 mT-25">Colores de marca</h6>
