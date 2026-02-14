@@ -1,9 +1,12 @@
 import { getIronSession, SessionOptions } from 'iron-session';
 
+export type UserRole = 'ADMIN' | 'CLIENT';
+
 export interface SessionData {
   userId: string;
   email: string;
   fullName: string;
+  role: UserRole;
   isLoggedIn: boolean;
 }
 
@@ -11,6 +14,7 @@ const defaultSession: SessionData = {
   userId: '',
   email: '',
   fullName: '',
+  role: 'CLIENT',
   isLoggedIn: false,
 };
 
@@ -33,7 +37,11 @@ export async function getSession(cookieStore: ReturnType<typeof import('next/hea
     session.userId = defaultSession.userId;
     session.email = defaultSession.email;
     session.fullName = defaultSession.fullName;
+    session.role = defaultSession.role;
     session.isLoggedIn = defaultSession.isLoggedIn;
+  }
+  if (!session.role) {
+    session.role = defaultSession.role;
   }
 
   return session;

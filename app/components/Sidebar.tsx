@@ -5,10 +5,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
+import { useSession } from '@/app/hooks/useSession';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { logoUrl, companyName } = useSettings();
+  const { user } = useSession();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,14 +72,24 @@ export default function Sidebar() {
               <span className="title">Dashboard</span>
             </Link>
           </li>
-          <li className={`nav-item ${pathname === '/settings' ? 'actived' : ''}`}>
-            <Link href="/settings" className="sidebar-link">
+          <li className={`nav-item ${pathname === '/profile' ? 'actived' : ''}`}>
+            <Link href="/profile" className="sidebar-link">
               <span className="icon-holder">
-                <i className="c-teal-500 ti-settings" />
+                <i className="c-indigo-500 ti-user" />
               </span>
-              <span className="title">Configuración</span>
+              <span className="title">Mi cuenta</span>
             </Link>
           </li>
+          {user?.role === 'ADMIN' && (
+            <li className={`nav-item ${pathname === '/settings' ? 'actived' : ''}`}>
+              <Link href="/settings" className="sidebar-link">
+                <span className="icon-holder">
+                  <i className="c-teal-500 ti-settings" />
+                </span>
+                <span className="title">Configuración</span>
+              </Link>
+            </li>
+          )}
           <li className="nav-item">
             <a className="sidebar-link" href="https://dashboardpack.com/?utm_source=adminator&utm_medium=sidebar&utm_campaign=go_pro" target="_blank" rel="noopener noreferrer">
               <span className="icon-holder">

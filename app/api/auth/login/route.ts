@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       where: { email: email.trim().toLowerCase() },
     });
 
-    if (!user) {
+    if (!user || user.status !== 'ENABLED') {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     session.userId = user.id;
     session.email = user.email;
     session.fullName = user.fullName;
+    session.role = user.role;
     session.isLoggedIn = true;
     await session.save();
 
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        role: user.role,
       },
     });
   } catch (error) {

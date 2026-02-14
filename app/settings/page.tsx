@@ -1,11 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { useSettings } from '../hooks/useSettings';
+import { useSession } from '../hooks/useSession';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { settings, loading, updateSettings } = useSettings();
+  const { user, loading: sessionLoading } = useSession();
   const [companyName, setCompanyName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -17,6 +21,16 @@ export default function SettingsPage() {
       setLogoUrl(settings.logo_url ?? '');
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (!sessionLoading && user?.role !== 'ADMIN') {
+      router.replace('/dashboard');
+    }
+  }, [router, sessionLoading, user?.role]);
+
+  if (sessionLoading || user?.role !== 'ADMIN') {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

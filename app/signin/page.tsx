@@ -121,7 +121,7 @@ export default function SignInPage() {
               disabled={loading}
             />
           </div>
-          <div className="mb-3">
+          <div className="mb-3 d-f jc-sb ai-c">
             <div className="form-check">
               <input
                 type="checkbox"
@@ -135,6 +135,9 @@ export default function SignInPage() {
                 Recordarme
               </label>
             </div>
+            <Link href="/forgot-password" className="fsz-sm c-primary fw-600">
+              ¿Olvidaste tu contraseña?
+            </Link>
           </div>
           <button
             type="submit"

@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         email: email.trim().toLowerCase(),
         phone: phone?.trim() || null,
         password: hashedPassword,
+        role: 'CLIENT',
       },
     });
 

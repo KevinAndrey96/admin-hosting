@@ -9,16 +9,43 @@ datasource db {
   provider = "mysql"
 }
 
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+enum UserStatus {
+  ENABLED
+  DISABLED
+}
+
 model User {
-  id        String   @id @default(cuid())
-  fullName  String   @map("full_name")
-  email     String   @unique
+  id        String     @id @default(cuid())
+  fullName  String     @map("full_name")
+  email     String     @unique
   phone     String?
   password  String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  role      UserRole   @default(CLIENT)
+  status    UserStatus @default(ENABLED)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model Setting {

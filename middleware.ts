@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const PROTECTED_PATHS = [
   '/dashboard',
+  '/profile',
   '/settings',
   '/email',
   '/compose',
@@ -18,8 +19,14 @@ const PROTECTED_PATHS = [
   '/error-500',
 ];
 
+const ADMIN_ONLY_PATHS = ['/settings'];
+
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'));
+}
+
+function isAdminOnlyPath(pathname: string): boolean {
+  return ADMIN_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'));
 }
 
 export async function middleware(request: NextRequest) {
@@ -42,6 +49,14 @@ export async function middleware(request: NextRequest) {
       const signinUrl = new URL('/signin', request.url);
       signinUrl.searchParams.set('from', pathname);
       return NextResponse.redirect(signinUrl);
+    }
+
+    if (sessionRes.ok) {
+      const data = await sessionRes.json();
+      const role = data?.user?.role;
+      if (isAdminOnlyPath(pathname) && role !== 'ADMIN') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
     }
   } catch {
     const signinUrl = new URL('/signin', request.url);

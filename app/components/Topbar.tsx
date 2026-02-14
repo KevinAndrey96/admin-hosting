@@ -5,12 +5,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '../hooks/useTheme';
+import { useSession } from '../hooks/useSession';
 
 type HeaderDropdown = 'notifications' | 'emails' | 'user' | null;
 
 export default function Topbar() {
   const router = useRouter();
   const { theme, toggleTheme, mounted } = useTheme();
+  const { user } = useSession();
   const [searchActive, setSearchActive] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<HeaderDropdown>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -193,22 +195,36 @@ export default function Topbar() {
               <div className="peer mR-10">
                 <Image className="w-2r bdrs-50p" src="https://randomuser.me/api/portraits/men/10.jpg" alt="" width={32} height={32} />
               </div>
-              <div className="peer">
-                <span className="fsz-sm c-grey-900">John Doe</span>
+              <div className="peer d-f ai-c gap-2">
+                <span className="fsz-sm c-grey-900">{user?.fullName ?? 'Usuario'}</span>
+                {user?.role && (
+                  <span
+                    className="badge rounded-pill fsz-xs fw-600"
+                    style={{
+                      backgroundColor: user.role === 'ADMIN' ? '#dc3545' : '#20c997',
+                      color: '#fff',
+                      padding: '4px 10px',
+                    }}
+                  >
+                    {user.role === 'ADMIN' ? 'Admin' : 'Cliente'}
+                  </span>
+                )}
               </div>
             </a>
             <ul className={`dropdown-menu fsz-sm ${openDropdown === 'user' ? 'show' : ''}`}>
+              {user?.role === 'ADMIN' && (
+                <li>
+                  <Link href="/settings" className="d-b td-n pY-5 bgcH-grey-100 c-grey-700">
+                    <i className="ti-settings mR-10" />
+                    <span>Configuración</span>
+                  </Link>
+                </li>
+              )}
               <li>
-                <a href="#" className="d-b td-n pY-5 bgcH-grey-100 c-grey-700">
-                  <i className="ti-settings mR-10" />
-                  <span>Setting</span>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="d-b td-n pY-5 bgcH-grey-100 c-grey-700">
+                <Link href="/profile" className="d-b td-n pY-5 bgcH-grey-100 c-grey-700">
                   <i className="ti-user mR-10" />
-                  <span>Profile</span>
-                </a>
+                  <span>Mi cuenta</span>
+                </Link>
               </li>
               <li>
                 <a href="#" className="d-b td-n pY-5 bgcH-grey-100 c-grey-700">

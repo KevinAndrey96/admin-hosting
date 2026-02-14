@@ -1,0 +1,62 @@
+/**
+ * Email sending via SMTP (mail server propio).
+ * Variables de entorno requeridas en .env:
+ * SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
+ * SMTP_SECURE (opcional, default: false para puerto 587)
+ * SMTP_FROM (opcional, default: SMTP_USER)
+ * EMAIL_SKIP_SEND (opcional): si "true", no envía y solo loguea (útil en localhost)
+ */
+
+import nodemailer from 'nodemailer';
+
+function getTransporter() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD;
+  // Puerto 587 usa STARTTLS (secure: false); puerto 465 usa SSL implícito (secure: true)
+  const secure = port === 465 || (process.env.SMTP_SECURE === 'true' && port !== 587);
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+  });
+}
+
+export async function sendEmail(options: {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const skipSend = process.env.EMAIL_SKIP_SEND === 'true' || process.env.EMAIL_SKIP_SEND === '1';
+  const transporter = getTransporter();
+  const from = options.from || process.env.SMTP_FROM || process.env.SMTP_USER;
+
+  if (!transporter || skipSend) {
+    const reason = skipSend ? 'EMAIL_SKIP_SEND activo (localhost/dev)' : 'SMTP no configurado';
+    console.warn(`[Email] ${reason}. Logging en consola.`);
+    console.log('[Email] To:', options.to, 'Subject:', options.subject);
+    console.log('[Email] Body (html):', options.html.slice(0, 300) + (options.html.length > 300 ? '...' : ''));
+    return { ok: true };
+  }
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    });
+    return { ok: true };
+  } catch (e) {
+    console.error('[Email] Send failed:', e);
+    return { ok: false, error: String(e) };
+  }
+}
