@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+const TRANSFER_STATUSES = ['PENDING_PAYMENT', 'PENDING_APPROVAL'] as ['PENDING_PAYMENT', 'PENDING_APPROVAL'];
+
 /**
  * GET: List domains with pending TRANSFER only (authCode set).
  * Excludes registration requests (REGISTRATION_REQUESTED or PENDING_* without authCode).
@@ -19,12 +21,12 @@ export async function GET() {
     const isAdmin = session.role === 'ADMIN';
     const where = isAdmin
       ? {
-          status: { in: ['PENDING_PAYMENT', 'PENDING_APPROVAL'] as const },
+          status: { in: [...TRANSFER_STATUSES] },
           authCode: { not: null },
         }
       : {
           userID: session.userId,
-          status: { in: ['PENDING_PAYMENT', 'PENDING_APPROVAL'] as const },
+          status: { in: [...TRANSFER_STATUSES] },
           authCode: { not: null },
         };
 

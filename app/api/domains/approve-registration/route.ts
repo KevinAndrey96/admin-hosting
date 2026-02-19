@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
         password,
         plan: domain.registrationPackageID,
         contactemail: domain.user.email,
-        autoRenew: false, // Explicitly set autoRenew to false
       });
 
       if (!hostingResult.ok) {
@@ -95,6 +94,11 @@ export async function POST(request: NextRequest) {
           registrantState: domain.registrantState || undefined,
           registrantCountry: domain.registrantCountry || undefined,
           registrantPostalCode: domain.registrantPostalCode || undefined,
+        },
+        {
+          years: 1,
+          privacyEnabled: domain.privacyEnabled ?? false,
+          autoRenew: false,
         }
       );
 
