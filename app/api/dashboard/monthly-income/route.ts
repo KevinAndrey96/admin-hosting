@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { getHostingEffectivePrice } from '@/lib/hosting-price';
 
 function requireAuth(session: { isLoggedIn: boolean; userId?: string }) {
   return session.isLoggedIn && session.userId;
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
         },
         select: {
           nextBillingDate: true,
+          salePriceOverride: true,
           hostingPackage: { select: { salePrice: true, currency: true } },
         },
       }),
@@ -44,7 +46,11 @@ export async function GET(request: Request) {
     for (const h of hostings) {
       const d = h.nextBillingDate;
       if (d.getFullYear() === year) {
-        monthly[d.getMonth() + 1] += Number(h.hostingPackage.salePrice);
+        const { salePrice } = getHostingEffectivePrice({
+          salePriceOverride: h.salePriceOverride,
+          hostingPackage: h.hostingPackage,
+        });
+        monthly[d.getMonth() + 1] += salePrice;
       }
     }
     for (const d of domains) {

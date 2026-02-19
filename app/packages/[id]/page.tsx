@@ -51,6 +51,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 const SERVICE_LABELS: Record<string, string> = {
   ENABLED: 'Activo',
+  PENDING: 'Pendiente',
   SUSPENDED: 'Suspendido',
   CANCELLED: 'Cancelado',
 };

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { getHostingEffectivePrice } from '@/lib/hosting-price';
 
 function requireAuth(session: { isLoggedIn: boolean; userId?: string }) {
   return session.isLoggedIn && session.userId;
@@ -38,10 +39,14 @@ export async function GET(request: NextRequest) {
       if (!hosting) {
         return NextResponse.json({ error: 'Hosting no encontrado' }, { status: 404 });
       }
+      const { salePrice, currency } = getHostingEffectivePrice({
+        salePriceOverride: hosting.salePriceOverride,
+        hostingPackage: hosting.hostingPackage,
+      });
       return NextResponse.json({
         itemLabel: hosting.hostingPackage.name,
-        salePrice: Number(hosting.hostingPackage.salePrice),
-        currency: hosting.hostingPackage.currency,
+        salePrice,
+        currency,
         currentExpirationDate: hosting.nextBillingDate instanceof Date ? hosting.nextBillingDate.toISOString() : String(hosting.nextBillingDate ?? ''),
       });
     }
@@ -61,7 +66,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (tipo.includes('dominio') && domainId) {
+    // Renew or other domain operations (exclude registrar/transfer so they use their own blocks)
+    if (
+      tipo.includes('dominio') &&
+      domainId &&
+      tipo !== 'registrar-dominio' &&
+      tipo !== 'transferir-dominio'
+    ) {
       const domain = await prisma.domain.findFirst({
         where: {
           id: domainId,
@@ -103,49 +114,41 @@ export async function GET(request: NextRequest) {
     }
 
     if (tipo === 'registrar-dominio' && domainId) {
-      // If hostingId is provided, prioritize hosting service data
       if (hostingId) {
-        console.log('Buscando hosting con ID:', hostingId);
         const hosting = await prisma.hostingService.findFirst({
           where: {
             id: hostingId,
             ...(session.role !== 'ADMIN' ? { userID: session.userId } : {}),
           },
-          include: { 
+          include: {
             hostingPackage: { select: { name: true, salePrice: true, currency: true } },
           },
         });
-        
-        console.log('Hosting encontrado:', hosting);
-        
         if (hosting && hosting.hostingPackage) {
-          // Get domain name from domainId for the label
           const domain = await prisma.domain.findUnique({
             where: { id: domainId },
             select: { fqdn: true },
           });
-          
           const domainFqdn = domain?.fqdn || 'Dominio';
-          console.log('Datos a devolver:', {
-            itemLabel: `${domainFqdn} + ${hosting.hostingPackage.name}`,
-            salePrice: Number(hosting.hostingPackage.salePrice),
-            currency: hosting.hostingPackage.currency,
+          const { salePrice, currency } = getHostingEffectivePrice({
+            salePriceOverride: hosting.salePriceOverride,
+            hostingPackage: hosting.hostingPackage,
           });
-          
           return NextResponse.json({
             itemLabel: `${domainFqdn} + ${hosting.hostingPackage.name}`,
-            salePrice: Number(hosting.hostingPackage.salePrice),
-            currency: hosting.hostingPackage.currency,
+            salePrice,
+            currency,
           });
         }
       }
 
-      // Fallback to domain-only logic
+      // Fallback to domain-only logic (allow PENDING_APPROVAL so refresh after upload still works)
       const domain = await prisma.domain.findFirst({
         where: {
           id: domainId,
           userID: session.userId!,
-          status: 'REGISTRATION_REQUESTED',
+          status: { in: ['REGISTRATION_REQUESTED', 'PENDING_APPROVAL'] },
+          authCode: null,
         },
         include: {
           user: {

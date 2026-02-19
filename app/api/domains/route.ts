@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { DomainStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { getHostingEffectivePrice } from '@/lib/hosting-price';
 import { registerDomain } from '@/lib/spaceship';
 import type { WhoisContact } from '@/lib/spaceship';
 import {
@@ -41,12 +42,42 @@ export async function GET() {
       where,
       include: {
         user: { select: { fullName: true, email: true } },
+        hostingDomains: {
+          include: {
+            hosting: {
+              select: {
+                salePriceOverride: true,
+                hostingPackage: { select: { salePrice: true, currency: true } },
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
 
     const list = domains.map((d) => {
-      const domain = d as typeof d & { user: { fullName: string; email: string } };
+      const domain = d as typeof d & {
+        user: { fullName: string; email: string };
+        hostingDomains: Array<{
+          hosting: {
+            salePriceOverride: unknown;
+            hostingPackage: { salePrice: unknown; currency: string } | null;
+          };
+        }>;
+      };
+      const domainSalePrice = Number(domain.salePrice);
+      let effectiveSalePrice: number = domainSalePrice;
+      let currency = domain.currency;
+      const firstHosting = domain.hostingDomains?.[0]?.hosting;
+      if (firstHosting) {
+        const effective = getHostingEffectivePrice({
+          salePriceOverride: firstHosting.salePriceOverride,
+          hostingPackage: firstHosting.hostingPackage,
+        });
+        effectiveSalePrice = effective.salePrice;
+        currency = effective.currency;
+      }
       return {
         id: domain.id,
         userID: domain.userID,
@@ -54,8 +85,9 @@ export async function GET() {
         clientEmail: domain.user.email,
         registrarName: domain.registrarName,
         fqdn: domain.fqdn,
-        salePrice: Number(domain.salePrice),
-        currency: domain.currency,
+        salePrice: domainSalePrice,
+        effectiveSalePrice,
+        currency,
         billingCycle: domain.billingCycle,
         renewalDate: domain.renewalDate,
         nextBillingDate: domain.nextBillingDate,

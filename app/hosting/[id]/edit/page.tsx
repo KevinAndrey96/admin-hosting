@@ -15,6 +15,7 @@ type HostingData = {
   packageName: string;
   salePrice: number;
   currency: string;
+  salePriceOverride: number | null;
   domainIDs: string[];
   domainFqdns: string[];
   username: string;
@@ -42,6 +43,7 @@ export default function EditHostingPage() {
   const [domainIDs, setDomainIDs] = useState<string[]>([]);
   const [username, setUsername] = useState('');
   const [nextBillingDate, setNextBillingDate] = useState('');
+  const [salePriceOverride, setSalePriceOverride] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('PENDING');
   const [serviceStatus, setServiceStatus] = useState('ENABLED');
   const [saving, setSaving] = useState(false);
@@ -92,6 +94,7 @@ export default function EditHostingPage() {
           setDomainIDs(data.domainIDs || []);
           setUsername(data.username || '');
           setNextBillingDate(data.nextBillingDate ? data.nextBillingDate.slice(0, 10) : '');
+          setSalePriceOverride(data.salePriceOverride != null ? String(data.salePriceOverride) : '');
           setPaymentStatus(data.paymentStatus || 'PENDING');
           setServiceStatus(data.serviceStatus || 'ENABLED');
         } else {
@@ -146,6 +149,7 @@ export default function EditHostingPage() {
           domainIDs,
           username: username.trim(),
           nextBillingDate: nextBillingDate || undefined,
+          salePriceOverride: salePriceOverride.trim() === '' ? null : salePriceOverride.trim(),
           paymentStatus,
           serviceStatus,
         }),
@@ -235,6 +239,21 @@ export default function EditHostingPage() {
                   </select>
                 </div>
                 <div className="mb-3">
+                  <label htmlFor="salePriceOverride" className="form-label fw-500">Precio custom (opcional)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="form-control"
+                    id="salePriceOverride"
+                    value={salePriceOverride}
+                    onChange={(e) => setSalePriceOverride(e.target.value)}
+                    placeholder="Vacío = usar precio del paquete"
+                    disabled={saving}
+                  />
+                  <small className="form-text text-muted">Precio efectivo actual: $ {hosting.salePrice.toLocaleString('es-CO')} {hosting.salePriceOverride != null ? '(custom)' : '(del paquete)'}. Dejar vacío para heredar del paquete.</small>
+                </div>
+                <div className="mb-3">
                   <label className="form-label">Dominios asociados</label>
                   <div className="border rounded p-3" style={{ maxHeight: 160, overflowY: 'auto' }}>
                     {domains.length === 0 ? (
@@ -315,6 +334,7 @@ export default function EditHostingPage() {
                       disabled={saving}
                     >
                       <option value="ENABLED">Activo</option>
+                      <option value="PENDING">Pendiente</option>
                       <option value="SUSPENDED">Suspendido</option>
                       <option value="CANCELLED">Cancelado</option>
                     </select>

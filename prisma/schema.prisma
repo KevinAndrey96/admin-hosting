@@ -115,6 +115,7 @@ enum DomainStatus {
 
 enum HostingServiceStatus {
   ENABLED
+  PENDING   // Created at registration request; WHM account created on admin approval
   SUSPENDED
   CANCELLED
 }
@@ -172,16 +173,17 @@ model Domain {
 }
 
 model HostingService {
-  id             String              @id @default(cuid())
-  userID         String              @map("user_id")
-  packageID      String              @map("package_id")
-  username       String
-  billingCycle   BillingCycle        @default(ANNUAL) @map("billing_cycle")
-  nextBillingDate DateTime           @map("next_billing_date")
-  paymentStatus  PaymentStatus       @default(PENDING) @map("payment_status")
-  serviceStatus  HostingServiceStatus @default(ENABLED) @map("service_status")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
+  id                String              @id @default(cuid())
+  userID            String              @map("user_id")
+  packageID         String              @map("package_id")
+  username          String
+  billingCycle      BillingCycle        @default(ANNUAL) @map("billing_cycle")
+  nextBillingDate   DateTime            @map("next_billing_date")
+  paymentStatus     PaymentStatus       @default(PENDING) @map("payment_status")
+  serviceStatus     HostingServiceStatus @default(ENABLED) @map("service_status")
+  salePriceOverride Decimal?            @map("sale_price_override") @db.Decimal(10, 2) // null = inherit from package
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
 
   user    User            @relation(fields: [userID], references: [id], onDelete: Cascade)
   hostingPackage HostingPackage @relation(fields: [packageID], references: [id], onDelete: Restrict)

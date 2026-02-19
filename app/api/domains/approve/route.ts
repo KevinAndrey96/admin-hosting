@@ -1,146 +1,181 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { registerDomain } from "@/lib/spaceship";
-import { whmCreateAccount, deriveWhmUsernameFromDomain } from "@/lib/whm-client";
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { randomBytes } from 'crypto';
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
+import { registerDomain } from '@/lib/spaceship';
+import { whmCreateAccount, deriveWhmUsernameFromDomain } from '@/lib/whm-client';
 
+/**
+ * POST: Approve domain registration request (admin only).
+ * Order: (1) Create hosting in WHM + DB if withHosting, (2) Register domain in Spaceship, (3) Set domain ACTIVE.
+ */
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { message: "No autorizado" },
-        { status: 401 }
-      );
+    const cookieStore = await cookies();
+    const session = await getSession(cookieStore);
+
+    if (!session.isLoggedIn || session.role !== 'ADMIN') {
+      return NextResponse.json({ message: 'No autorizado' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { domainId } = body;
+    const body = await request.json().catch(() => ({}));
+    const domainId = body?.domainId?.trim();
 
     if (!domainId) {
       return NextResponse.json(
-        { message: "El ID del dominio es requerido" },
+        { message: 'El ID del dominio es requerido' },
         { status: 400 }
       );
     }
 
-    // Get domain with registration request status
     const domain = await prisma.domain.findFirst({
       where: {
         id: domainId,
-        status: 'REGISTRATION_REQUESTED',
+        status: { in: ['REGISTRATION_REQUESTED', 'PENDING_APPROVAL'] },
+        authCode: null,
       },
       include: {
-        user: {
-          select: { fullName: true, email: true },
+        user: { select: { fullName: true, email: true } },
+        hostingDomains: {
+          include: { hosting: true },
         },
       },
     });
 
     if (!domain) {
       return NextResponse.json(
-        { message: "Solicitud de registro no encontrada o ya procesada" },
+        { message: 'Solicitud de registro no encontrada o ya procesada' },
         { status: 404 }
       );
     }
 
-    let registrationResult = null;
-    let hostingResult = null;
+    const registrantEmail = (domain.registrantEmail || domain.user?.email || '').trim();
+    if (!registrantEmail) {
+      return NextResponse.json(
+        { message: 'Falta el email del registrante en la solicitud' },
+        { status: 400 }
+      );
+    }
 
-    try {
-      // Register domain in Spaceship
-      if (domain.registrantEmail && domain.registrantName) {
-        registrationResult = await registerDomain(
-          domain.fqdn,
-          {
-            registrantName: domain.registrantName,
-            registrantOrg: domain.registrantOrg || undefined,
-            registrantEmail: domain.registrantEmail,
-            registrantPhone: domain.registrantPhone || undefined,
-            registrantAddress: domain.registrantAddress || undefined,
-            registrantCity: domain.registrantCity || undefined,
-            registrantState: domain.registrantState || undefined,
-            registrantCountry: domain.registrantCountry || undefined,
-            registrantPostalCode: domain.registrantPostalCode || undefined,
-          }
+    // 1) Create hosting in WHM if requested; update existing PENDING hosting or create new
+    let hostingResult: { ok: true; username: string } | { ok: false; error: string } | null = null;
+    if (domain.withHosting && domain.registrationPackageID) {
+      const pkg = await prisma.hostingPackage.findUnique({
+        where: { id: domain.registrationPackageID },
+      });
+      if (!pkg) {
+        return NextResponse.json(
+          { message: 'Paquete de hosting de la solicitud no existe' },
+          { status: 400 }
         );
+      }
+      const whmUsername = deriveWhmUsernameFromDomain(domain.fqdn);
+      const whmPassword = randomBytes(14)
+        .toString('base64')
+        .replace(/[+/=]/g, (c) => (c === '+' ? 'A' : c === '/' ? 'B' : '0'))
+        .slice(0, 20);
 
-        if (!registrationResult.ok) {
-          throw new Error(`Error en Spaceship: ${registrationResult.error}`);
-        }
+      hostingResult = await whmCreateAccount({
+        username: whmUsername,
+        domain: domain.fqdn,
+        password: whmPassword,
+        plan: pkg.id,
+        contactemail: domain.user?.email?.trim() || undefined,
+      });
+
+      if (!hostingResult.ok) {
+        return NextResponse.json(
+          { message: `No se pudo crear la cuenta en WHM: ${hostingResult.error}` },
+          { status: 502 }
+        );
       }
 
-      // Create hosting account if hosting is included
-      if (domain.withHosting && domain.registrationPackageID) {
-        const username = deriveWhmUsernameFromDomain(domain.fqdn);
-        const password = generateRandomPassword();
-        
-        hostingResult = await whmCreateAccount({
-          domain: domain.fqdn,
-          username,
-          password,
-          plan: domain.registrationPackageID,
-          contactemail: domain.user.email,
+      const nextBillingHosting = new Date();
+      nextBillingHosting.setFullYear(nextBillingHosting.getFullYear() + 1);
+
+      const existingPendingHosting = domain.hostingDomains?.find(
+        (hd) => hd.hosting?.serviceStatus === 'PENDING'
+      )?.hosting;
+
+      if (existingPendingHosting) {
+        await prisma.hostingService.update({
+          where: { id: existingPendingHosting.id },
+          data: {
+            username: hostingResult.ok ? hostingResult.username : existingPendingHosting.username,
+            nextBillingDate: nextBillingHosting,
+            serviceStatus: 'ENABLED',
+          },
         });
-
-        if (!hostingResult.ok) {
-          throw new Error(`Error en WHM: ${hostingResult.error}`);
-        }
-
-        // Create hosting service record
+      } else {
         await prisma.hostingService.create({
           data: {
             userID: domain.userID,
-            packageID: domain.registrationPackageID,
-            username: username,
-            billingCycle: "ANNUAL",
-            nextBillingDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-            paymentStatus: "PAID", // Already paid
-            serviceStatus: "ENABLED",
+            packageID: pkg.id,
+            username: hostingResult.ok ? hostingResult.username : whmUsername,
+            nextBillingDate: nextBillingHosting,
+            paymentStatus: 'PENDING',
+            serviceStatus: 'ENABLED',
+            domains: {
+              create: [{ domainID: domain.id }],
+            },
           },
         });
       }
+    }
 
-      // Update domain status to ACTIVE
-      await prisma.domain.update({
-        where: { id: domainId },
-        data: {
-          status: "ACTIVE",
-          registrarName: "Spaceship",
-          paymentStatus: "PAID",
-        },
-      });
+    // 2) Register domain in Spaceship
+    const whois = {
+      registrantName: (domain.registrantName || domain.user?.fullName || 'N/A').trim(),
+      registrantOrg: domain.registrantOrg?.trim() || undefined,
+      registrantEmail,
+      registrantPhone: domain.registrantPhone?.trim() || undefined,
+      registrantAddress: domain.registrantAddress?.trim() || undefined,
+      registrantCity: domain.registrantCity?.trim() || undefined,
+      registrantState: domain.registrantState?.trim() || undefined,
+      registrantCountry: domain.registrantCountry?.trim() || 'CO',
+      registrantPostalCode: domain.registrantPostalCode?.trim() || undefined,
+    };
 
-      return NextResponse.json({
-        message: "Dominio aprobado y procesado exitosamente",
-        domain: domain.fqdn,
-        registrationResult,
-        hostingResult,
-      });
-    } catch (error) {
-      console.error("Error approving domain registration:", error);
+    const registrationResult = await registerDomain(domain.fqdn, whois, {
+      years: 1,
+      privacyEnabled: domain.privacyEnabled,
+      autoRenew: false,
+    });
+
+    if (!registrationResult.ok) {
       return NextResponse.json(
-        { 
-          message: error instanceof Error ? error.message : "Error procesando la aprobación",
-          domain: domain.fqdn,
-        },
-        { status: 500 }
+        { message: `No se pudo registrar el dominio en Spaceship: ${registrationResult.error}` },
+        { status: 502 }
       );
     }
+
+    // 3) Update domain to ACTIVE and set renewal date
+    const renewalDate = new Date();
+    renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+
+    await prisma.domain.update({
+      where: { id: domainId },
+      data: {
+        status: 'ACTIVE',
+        registrarName: 'Spaceship',
+        paymentStatus: 'PAID',
+        renewalDate,
+        nextBillingDate: renewalDate,
+        transferLock: true,
+      },
+    });
+
+    return NextResponse.json({
+      message: 'Registro de dominio aprobado. Hosting creado en WHM (si aplica) y dominio registrado en Spaceship.',
+      domain: domain.fqdn,
+      hostingCreated: !!hostingResult?.ok,
+    });
   } catch (error) {
-    console.error("Error in approve domain route:", error);
+    console.error('Approve domain registration error:', error);
     return NextResponse.json(
-      { message: "Error interno del servidor" },
+      { message: error instanceof Error ? error.message : 'Error al aprobar el registro' },
       { status: 500 }
     );
   }
-}
-
-function generateRandomPassword(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-  let password = "";
-  for (let i = 0; i < 16; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
 }

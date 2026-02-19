@@ -4,11 +4,10 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
 /**
- * POST: Reject transfer request.
- * Admin only.
+ * POST: Reject a domain registration request (admin only).
  */
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -21,25 +20,18 @@ export async function POST(
 
     const { id } = await params;
 
-    const domain = await prisma.domain.findUnique({
-      where: { id },
+    const domain = await prisma.domain.findFirst({
+      where: {
+        id,
+        status: { in: ['REGISTRATION_REQUESTED', 'PENDING_APPROVAL'] },
+        authCode: null,
+      },
     });
 
     if (!domain) {
-      return NextResponse.json({ error: 'Solicitud no encontrada' }, { status: 404 });
-    }
-
-    if (domain.status !== 'PENDING_APPROVAL') {
       return NextResponse.json(
-        { error: 'La solicitud ya fue procesada' },
-        { status: 400 }
-      );
-    }
-
-    if (!domain.authCode) {
-      return NextResponse.json(
-        { error: 'Esta solicitud es de registro de dominio, no de transferencia. Usa el panel de solicitudes de registro.' },
-        { status: 400 }
+        { error: 'Solicitud de registro no encontrada o ya procesada' },
+        { status: 404 }
       );
     }
 
@@ -48,13 +40,9 @@ export async function POST(
       data: { status: 'REJECTED' },
     });
 
-    // TODO: optional - send email to client with reason
-
-    return NextResponse.json({
-      message: 'Solicitud rechazada.',
-    });
+    return NextResponse.json({ message: 'Solicitud de registro rechazada.' });
   } catch (error) {
-    console.error('Transfer reject error:', error);
+    console.error('Reject registration error:', error);
     return NextResponse.json(
       { error: 'Error al rechazar la solicitud' },
       { status: 500 }

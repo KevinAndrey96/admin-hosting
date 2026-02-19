@@ -20,6 +20,7 @@ type Hosting = {
   diskUsed?: string | null;
   salePrice: number;
   currency: string;
+  salePriceOverride?: number | null;
   domainIDs: string[];
   domainFqdns: string[];
   username: string;
@@ -73,6 +74,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 const SERVICE_LABELS: Record<string, string> = {
   ENABLED: 'Activo',
+  PENDING: 'Pendiente',
   SUSPENDED: 'Suspendido',
   CANCELLED: 'Cancelado',
 };
@@ -161,6 +163,17 @@ export default function HostingPage() {
     };
     fetchPackages();
   }, [user]);
+
+  /** For clients: effective price per package from their hostings (so package cards show what they pay). */
+  const effectivePriceByPackageId = useMemo(() => {
+    const m: Record<string, number> = {};
+    hostings.forEach((h) => {
+      if (h.packageID && (h.salePrice ?? 0) >= 0) {
+        m[h.packageID] = h.salePrice;
+      }
+    });
+    return m;
+  }, [hostings]);
 
   const filteredData = useMemo(() => {
     if (!search.trim()) return hostings;
@@ -433,7 +446,7 @@ export default function HostingPage() {
                     <ul className="m-0 p-0" style={{ listStyle: 'none' }}>
                       <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-wallet c-grey-600" style={{ fontSize: 14 }} />
-                        $ {p.salePrice.toLocaleString('es-CO')}/año
+                        $ {(effectivePriceByPackageId[p.id] ?? p.salePrice).toLocaleString('es-CO')}/año
                       </li>
                       <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-harddrive c-grey-600" style={{ fontSize: 14 }} />

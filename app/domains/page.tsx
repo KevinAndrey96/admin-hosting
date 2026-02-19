@@ -17,6 +17,8 @@ type Domain = {
   registrarName: string;
   fqdn: string;
   salePrice: number;
+  /** When domain is linked to hosting, effective price of that hosting (what client pays). Use for display. */
+  effectiveSalePrice?: number;
   currency: string;
   billingCycle: string;
   renewalDate: string;
@@ -383,55 +385,93 @@ const [registrationRequests, setRegistrationRequests] = useState<RegistrationReq
       <span className="ms-1 c-grey-500" style={{ opacity: 0.5 }}>⇅</span>
     );
 
-  const handleApproveTransfer = async (id: string) => {
+  const handleApproveRegistration = async (id: string) => {
     setApprovingId(id);
     try {
       const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-      
-      // Check if this is a domain registration request
-      const domain = domains.find(d => d.id === id);
-      if (domain?.status === 'REGISTRATION_REQUESTED') {
-        // Handle domain registration approval
-        const res = await fetch(`${basePath}/api/domains/approve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domainId: id }),
-          credentials: 'include',
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          const listRes = await fetch(`${basePath}/api/domains`, { credentials: 'include' });
-          if (listRes.ok) {
-            const list = await listRes.json();
-            setDomains(list);
-          }
-          alert(data.message || 'Registro de dominio aprobado');
-        } else {
-          alert(data.message || data.error || 'Error al aprobar');
+      const res = await fetch(`${basePath}/api/domains/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domainId: id }),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const [listRes, regRes] = await Promise.all([
+          fetch(`${basePath}/api/domains`, { credentials: 'include' }),
+          fetch(`${basePath}/api/domains/registration-requests`, { credentials: 'include' }),
+        ]);
+        if (listRes.ok) {
+          const list = await listRes.json();
+          setDomains(list);
         }
+        if (regRes.ok) {
+          const regList = await regRes.json();
+          setRegistrationRequests(regList);
+        }
+        alert(data.message || 'Registro de dominio aprobado');
       } else {
-        // Handle transfer approval (existing logic)
-        const res = await fetch(`${basePath}/api/domains/transfer-requests/${id}/approve`, {
-          method: 'POST',
-          credentials: 'include',
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          setTransferRequests((prev) => prev.filter((r) => r.id !== id));
-          const listRes = await fetch(`${basePath}/api/domains`, { credentials: 'include' });
-          if (listRes.ok) {
-            const list = await listRes.json();
-            setDomains(list);
-          }
-          alert(data.message || 'Transferencia aprobada');
-        } else {
-          alert(data.error || 'Error al aprobar');
-        }
+        alert(data.message || data.error || 'Error al aprobar');
       }
     } catch {
       alert('Error de conexión');
     } finally {
       setApprovingId(null);
+    }
+  };
+
+  const handleApproveTransfer = async (id: string) => {
+    setApprovingId(id);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/domains/transfer-requests/${id}/approve`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setTransferRequests((prev) => prev.filter((r) => r.id !== id));
+        const listRes = await fetch(`${basePath}/api/domains`, { credentials: 'include' });
+        if (listRes.ok) {
+          const list = await listRes.json();
+          setDomains(list);
+        }
+        alert(data.message || 'Transferencia aprobada');
+      } else {
+        alert(data.error || 'Error al aprobar');
+      }
+    } catch {
+      alert('Error de conexión');
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleRejectRegistration = async (id: string) => {
+    if (!confirm('¿Rechazar esta solicitud de registro de dominio?')) return;
+    setRejectingId(id);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/domains/registration-requests/${id}/reject`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setRegistrationRequests((prev) => prev.filter((r) => r.id !== id));
+        const listRes = await fetch(`${basePath}/api/domains`, { credentials: 'include' });
+        if (listRes.ok) {
+          const list = await listRes.json();
+          setDomains(list);
+        }
+        alert(data.message || 'Solicitud rechazada');
+      } else {
+        alert(data.error || 'Error al rechazar');
+      }
+    } catch {
+      alert('Error de conexión');
+    } finally {
+      setRejectingId(null);
     }
   };
 
@@ -530,9 +570,9 @@ const [registrationRequests, setRegistrationRequests] = useState<RegistrationReq
                           {r.status === 'PENDING_APPROVAL' ? 'Pendiente de aprobación' : 'Pendiente de pago'}
                         </span>
                       </td>
-                      <td>{r.clientName}</td>
-                      <td>{r.email}</td>
-                      <td>${Number(r.amount).toLocaleString('es-CO')}</td>
+                      <td>{(r as { user?: { fullName?: string; email?: string } }).user?.fullName ?? '—'}</td>
+                      <td>{(r as { user?: { fullName?: string; email?: string } }).user?.email ?? '—'}</td>
+                      <td>$ {Number((r as { salePrice?: number }).salePrice ?? 0).toLocaleString('es-CO')}</td>
                       <td>{dayjs(r.createdAt).format('DD/MM/YYYY')}</td>
                       <td className="ta-e">
                         <button
@@ -623,7 +663,7 @@ const [registrationRequests, setRegistrationRequests] = useState<RegistrationReq
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-success p-8 m-0"
-                          onClick={() => handleApproveTransfer(r.id)}
+                          onClick={() => handleApproveRegistration(r.id)}
                           disabled={approvingId === r.id}
                         >
                           {approvingId === r.id ? (
@@ -635,7 +675,7 @@ const [registrationRequests, setRegistrationRequests] = useState<RegistrationReq
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-danger p-8 m-0"
-                          onClick={() => handleRejectTransfer(r.id)}
+                          onClick={() => handleRejectRegistration(r.id)}
                           disabled={rejectingId === r.id}
                         >
                           {rejectingId === r.id ? (

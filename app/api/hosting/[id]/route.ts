@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { getHostingEffectivePrice, toNumber } from '@/lib/hosting-price';
 
 function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
@@ -18,6 +19,11 @@ async function getHostingById(id: string) {
   });
   if (!h) return null;
 
+  const { salePrice, currency } = getHostingEffectivePrice({
+    salePriceOverride: h.salePriceOverride,
+    hostingPackage: h.hostingPackage,
+  });
+
   return {
     id: h.id,
     userID: h.userID,
@@ -25,8 +31,9 @@ async function getHostingById(id: string) {
     clientEmail: h.user.email,
     packageID: h.packageID,
     packageName: h.hostingPackage.name,
-    salePrice: Number(h.hostingPackage.salePrice),
-    currency: h.hostingPackage.currency,
+    salePrice,
+    currency,
+    salePriceOverride: toNumber(h.salePriceOverride) ?? null,
     domainIDs: h.domains.map((hd) => hd.domain.id),
     domainFqdns: h.domains.map((hd) => hd.domain.fqdn),
     username: h.username,
@@ -96,6 +103,7 @@ export async function PUT(
       nextBillingDate,
       paymentStatus,
       serviceStatus,
+      salePriceOverride,
     } = body;
 
     const data: Record<string, unknown> = {};
@@ -122,8 +130,18 @@ export async function PUT(
     if (paymentStatus && ['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'].includes(paymentStatus)) {
       data.paymentStatus = paymentStatus;
     }
-    if (serviceStatus && ['ENABLED', 'SUSPENDED', 'CANCELLED'].includes(serviceStatus)) {
+    if (serviceStatus && ['ENABLED', 'PENDING', 'SUSPENDED', 'CANCELLED'].includes(serviceStatus)) {
       data.serviceStatus = serviceStatus;
+    }
+    if (salePriceOverride !== undefined) {
+      if (salePriceOverride === null || salePriceOverride === '') {
+        data.salePriceOverride = null;
+      } else {
+        const overrideNum = parseFloat(salePriceOverride);
+        if (!isNaN(overrideNum) && overrideNum >= 0) {
+          data.salePriceOverride = overrideNum;
+        }
+      }
     }
 
     const domainIdsArr = Array.isArray(domainIDs)

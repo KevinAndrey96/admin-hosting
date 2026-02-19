@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { whmListAccounts } from '@/lib/whm-client';
+import { getHostingEffectivePrice, toNumber } from '@/lib/hosting-price';
 
 function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
@@ -42,6 +43,10 @@ export async function GET(request: NextRequest) {
       const domains = h.domains.map((hd) => hd.domain.fqdn.toLowerCase().trim());
       const matchedDomain = domains.find((d) => d in whmByDomain);
       const diskUsed = matchedDomain ? whmByDomain[matchedDomain]?.diskused : undefined;
+      const { salePrice, currency } = getHostingEffectivePrice({
+        salePriceOverride: h.salePriceOverride,
+        hostingPackage: h.hostingPackage,
+      });
       return {
         id: h.id,
         userID: h.userID,
@@ -52,8 +57,9 @@ export async function GET(request: NextRequest) {
         packageColorHex: h.hostingPackage.colorHex,
         diskSpaceQuotaMb: h.hostingPackage.diskSpaceQuotaMb,
         diskUsed,
-        salePrice: Number(h.hostingPackage.salePrice),
-        currency: h.hostingPackage.currency,
+        salePrice,
+        currency,
+        salePriceOverride: toNumber(h.salePriceOverride) ?? null,
         domainIDs: h.domains.map((hd) => hd.domain.id),
         domainFqdns: h.domains.map((hd) => hd.domain.fqdn),
         username: h.username,
@@ -95,6 +101,7 @@ export async function POST(request: NextRequest) {
       nextBillingDate,
       paymentStatus,
       serviceStatus,
+      salePriceOverride,
     } = body;
 
     if (!userID?.trim()) {
@@ -155,6 +162,12 @@ export async function POST(request: NextRequest) {
     }
 
     const nextBilling = nextBillingDate ? new Date(nextBillingDate) : new Date();
+    const overrideNum =
+      salePriceOverride !== undefined && salePriceOverride !== null && salePriceOverride !== ''
+        ? parseFloat(salePriceOverride)
+        : null;
+    const validOverride =
+      overrideNum != null && !isNaN(overrideNum) && overrideNum >= 0 ? overrideNum : null;
 
     const hosting = await prisma.hostingService.create({
       data: {
@@ -168,9 +181,10 @@ export async function POST(request: NextRequest) {
         paymentStatus: paymentStatus && ['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'].includes(paymentStatus)
           ? paymentStatus
           : 'PENDING',
-        serviceStatus: serviceStatus && ['ENABLED', 'SUSPENDED', 'CANCELLED'].includes(serviceStatus)
+        serviceStatus: serviceStatus && ['ENABLED', 'PENDING', 'SUSPENDED', 'CANCELLED'].includes(serviceStatus)
           ? serviceStatus
           : 'ENABLED',
+        salePriceOverride: validOverride,
       },
       include: {
         user: { select: { fullName: true, email: true } },
@@ -179,13 +193,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const { salePrice, currency } = getHostingEffectivePrice({
+      salePriceOverride: hosting.salePriceOverride,
+      hostingPackage: hosting.hostingPackage,
+    });
+
     return NextResponse.json(
       {
         id: hosting.id,
         userID: hosting.userID,
         clientName: hosting.user.fullName,
         packageName: hosting.hostingPackage.name,
-        salePrice: Number(hosting.hostingPackage.salePrice),
+        salePrice,
+        currency,
+        salePriceOverride: toNumber(hosting.salePriceOverride) ?? null,
         domainFqdns: hosting.domains.map((hd) => hd.domain.fqdn),
         username: hosting.username,
         nextBillingDate: hosting.nextBillingDate,

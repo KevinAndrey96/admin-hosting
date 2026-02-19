@@ -18,7 +18,8 @@ export async function GET() {
 
     const registrationRequests = await prisma.domain.findMany({
       where: {
-        status: 'REGISTRATION_REQUESTED',
+        status: { in: ['REGISTRATION_REQUESTED', 'PENDING_APPROVAL'] },
+        authCode: null,
       },
       include: {
         user: {

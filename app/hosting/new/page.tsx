@@ -21,6 +21,7 @@ export default function NewHostingPage() {
   const [domainIDs, setDomainIDs] = useState<string[]>([]);
   const [username, setUsername] = useState('');
   const [nextBillingDate, setNextBillingDate] = useState('');
+  const [salePriceOverride, setSalePriceOverride] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('PENDING');
   const [serviceStatus, setServiceStatus] = useState('ENABLED');
   const [saving, setSaving] = useState(false);
@@ -119,6 +120,7 @@ export default function NewHostingPage() {
           domainIDs: domainIDs.length ? domainIDs : undefined,
           username: username.trim(),
           nextBillingDate: nextBillingDate || undefined,
+          salePriceOverride: salePriceOverride.trim() === '' ? undefined : salePriceOverride.trim(),
           paymentStatus,
           serviceStatus,
         }),
@@ -197,6 +199,21 @@ export default function NewHostingPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="salePriceOverride" className="form-label fw-500">Precio custom (opcional)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="form-control"
+                    id="salePriceOverride"
+                    value={salePriceOverride}
+                    onChange={(e) => setSalePriceOverride(e.target.value)}
+                    placeholder="Vacío = usar precio del paquete"
+                    disabled={saving}
+                  />
+                  <small className="form-text text-muted">Dejar vacío para heredar el precio del paquete. Indicar un monto para cobrar un valor distinto a este cliente.</small>
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Dominios asociados</label>

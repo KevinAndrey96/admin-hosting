@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { getHostingEffectivePrice } from '@/lib/hosting-price';
 
 function requireAuth(session: { isLoggedIn: boolean; userId?: string }) {
   return session.isLoggedIn && session.userId;
@@ -46,7 +47,10 @@ export async function GET() {
           serviceStatus: 'ENABLED',
           paymentStatus: 'PAID',
         },
-        include: { hostingPackage: { select: { salePrice: true, currency: true } } },
+        select: {
+          salePriceOverride: true,
+          hostingPackage: { select: { salePrice: true, currency: true } },
+        },
       }),
       prisma.user.count({ where: { role: 'CLIENT' } }),
       prisma.hostingService.count({
@@ -59,10 +63,13 @@ export async function GET() {
     ]);
 
     const activeHostings = activeHostingsData.length;
-    const activeHostingsAnnualValue = activeHostingsData.reduce(
-      (sum, h) => sum + Number(h.hostingPackage.salePrice),
-      0
-    );
+    const activeHostingsAnnualValue = activeHostingsData.reduce((sum, h) => {
+      const { salePrice } = getHostingEffectivePrice({
+        salePriceOverride: h.salePriceOverride,
+        hostingPackage: h.hostingPackage,
+      });
+      return sum + salePrice;
+    }, 0);
     const currency = activeHostingsData[0]?.hostingPackage.currency ?? 'COP';
 
     return NextResponse.json({

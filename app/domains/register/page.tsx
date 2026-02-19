@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AdminLayout from '@/app/components/AdminLayout';
@@ -28,6 +28,7 @@ export default function RegisterDomainPage() {
   const [withHosting, setWithHosting] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState("");
   const [packages, setPackages] = useState<HostingPackage[]>([]);
+  const [hostings, setHostings] = useState<Array<{ packageID: string; salePrice: number }>>([]);
   const [loading, setLoading] = useState(false);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [availability, setAvailability] = useState<DomainAvailability | null>(null);
@@ -50,7 +51,34 @@ export default function RegisterDomainPage() {
   useEffect(() => {
     fetchPackages();
     fetchUserData();
+    fetchHostings();
   }, []);
+
+  const fetchHostings = async () => {
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/hosting`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : [];
+        setHostings(list.map((h: { packageID: string; salePrice: number }) => ({ packageID: h.packageID, salePrice: Number(h.salePrice) ?? 0 })));
+      }
+    } catch {
+      setHostings([]);
+    }
+  };
+
+  /** Max effective price per package from user's current hostings (so selected package shows the highest they pay). */
+  const effectivePriceByPackageId = useMemo(() => {
+    const m: Record<string, number> = {};
+    hostings.forEach((h) => {
+      if (h.packageID && h.salePrice >= 0) {
+        const current = m[h.packageID];
+        m[h.packageID] = current == null ? h.salePrice : Math.max(current, h.salePrice);
+      }
+    });
+    return m;
+  }, [hostings]);
 
   const fetchUserData = async () => {
     try {
@@ -173,16 +201,15 @@ export default function RegisterDomainPage() {
         const data = await response.json();
         setSuccess("Solicitud de registro enviada correctamente. Será redirigido al pago...");
         
-        // Redirect to payment page
+        // Redirect to pago; include hostingId when with hosting so price is shown from hosting package
+        const params = new URLSearchParams({ tipo: 'registrar-dominio', domainId: data.domainId });
+        if (data.hostingId) params.set('hostingId', data.hostingId);
         setTimeout(() => {
-          const paymentUrl = data.hostingId 
-            ? `/pago?tipo=contratar-hosting&packageId=${selectedPackageId}&domainId=${data.domainId}`
-            : `/pago?tipo=registrar-dominio&domainId=${data.domainId}`;
-          router.push(paymentUrl);
+          router.push(`/pago?${params.toString()}`);
         }, 2000);
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Error al procesar la solicitud");
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.message || errorData.error || "Error al procesar la solicitud");
       }
     } catch (error) {
       setError("Error al procesar la solicitud");
@@ -216,6 +243,9 @@ export default function RegisterDomainPage() {
   };
 
   const selectedPackage = packages.find(p => p.id === selectedPackageId);
+  /** Price to show for a package: max of catalog and user's current max for that package. */
+  const getDisplayPrice = (pkg: HostingPackage) =>
+    Math.max(pkg.salePrice, effectivePriceByPackageId[pkg.id] ?? 0);
 
   return (
     <div>
@@ -356,7 +386,7 @@ export default function RegisterDomainPage() {
                               <option value="">Seleccione un paquete</option>
                               {packages.map((pkg) => (
                                 <option key={pkg.id} value={pkg.id}>
-                                  {pkg.name} - {pkg.diskSpaceQuotaMb ? `${pkg.diskSpaceQuotaMb.toLocaleString('es-CO')} MB` : 'Ilimitado'} - {formatPrice(pkg.salePrice, pkg.currency)}
+                                  {pkg.name} - {pkg.diskSpaceQuotaMb ? `${pkg.diskSpaceQuotaMb.toLocaleString('es-CO')} MB` : 'Ilimitado'} - {formatPrice(getDisplayPrice(pkg), pkg.currency)}
                                 </option>
                               ))}
                             </select>
@@ -554,7 +584,7 @@ export default function RegisterDomainPage() {
                                     <tr>
                                       <td><strong>Costo Hosting:</strong></td>
                                       <td className="text-end">
-                                        {formatPrice(selectedPackage.salePrice, selectedPackage.currency)}
+                                        {formatPrice(getDisplayPrice(selectedPackage), selectedPackage.currency)}
                                       </td>
                                     </tr>
                                     <tr className="c-success">
@@ -575,7 +605,7 @@ export default function RegisterDomainPage() {
                                   <td><strong>Total a pagar:</strong></td>
                                   <td className="text-end fw-700 fsz-lg">
                                     {withHosting && selectedPackage
-                                      ? formatPrice(selectedPackage.salePrice, selectedPackage.currency)
+                                      ? formatPrice(getDisplayPrice(selectedPackage), selectedPackage.currency)
                                       : availability.price
                                       ? formatPrice(availability.price, availability.currency || "COP")
                                       : "Consultar"}

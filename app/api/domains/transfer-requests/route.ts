@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
 /**
- * GET: List domains with pending transfer (admin: PENDING_PAYMENT + PENDING_APPROVAL; client: own)
+ * GET: List domains with pending TRANSFER only (authCode set).
+ * Excludes registration requests (REGISTRATION_REQUESTED or PENDING_* without authCode).
  */
 export async function GET() {
   try {
@@ -17,8 +18,15 @@ export async function GET() {
 
     const isAdmin = session.role === 'ADMIN';
     const where = isAdmin
-      ? { status: { in: ['PENDING_PAYMENT', 'PENDING_APPROVAL'] as const } }
-      : { userID: session.userId, status: { in: ['PENDING_PAYMENT', 'PENDING_APPROVAL'] as const } };
+      ? {
+          status: { in: ['PENDING_PAYMENT', 'PENDING_APPROVAL'] as const },
+          authCode: { not: null },
+        }
+      : {
+          userID: session.userId,
+          status: { in: ['PENDING_PAYMENT', 'PENDING_APPROVAL'] as const },
+          authCode: { not: null },
+        };
 
     const domains = await prisma.domain.findMany({
       where,
