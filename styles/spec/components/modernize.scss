@@ -461,9 +461,15 @@ body {
 }
 
 .popover {
+  background-color: var(--c-bkg-card);
+  color: var(--c-text-base);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
+
+  .popover-body {
+    color: var(--c-text-base);
+  }
 }
 
 // ---------------------------------------------------------
@@ -534,8 +540,22 @@ body {
 
   .form-control,
   .form-select {
-    background-color: var(--c-bkg-body);
+    background-color: var(--c-bkg-card);
+    color: var(--c-text-base);
     border-color: var(--c-border);
+
+    &::placeholder {
+      color: var(--c-text-muted);
+    }
+
+    &:-webkit-autofill,
+    &:-webkit-autofill:hover,
+    &:-webkit-autofill:focus,
+    &:-webkit-autofill:active {
+      -webkit-text-fill-color: var(--c-text-base);
+      -webkit-box-shadow: 0 0 0 1000px var(--c-bkg-card) inset;
+      transition: background-color 5000s ease-in-out 0s;
+    }
 
     &:focus {
       border-color: var(--c-primary);

@@ -1,5 +1,16 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { unsealData } from 'iron-session';
+
+const COOKIE_NAME = 'admin_session';
+
+interface SessionData {
+  userId?: string;
+  email?: string;
+  fullName?: string;
+  role?: string;
+  isLoggedIn?: boolean;
+}
 
 const PROTECTED_PATHS = [
   '/dashboard',
@@ -42,30 +53,38 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  try {
-    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-    const sessionUrl = new URL(`${basePath}/api/auth/session`, request.url);
-    const sessionRes = await fetch(sessionUrl.toString(), {
-      headers: {
-        Cookie: request.headers.get('cookie') || '',
-      },
-    });
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/admin';
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    const signinUrl = new URL(`${basePath}/signin`, request.url);
+    return NextResponse.redirect(signinUrl);
+  }
 
-    if (sessionRes.status === 401) {
-      const signinUrl = new URL('/signin', request.url);
+  try {
+    const seal = request.cookies.get(COOKIE_NAME)?.value;
+    if (!seal) {
+      const signinUrl = new URL(`${basePath}/signin`, request.url);
       signinUrl.searchParams.set('from', pathname);
       return NextResponse.redirect(signinUrl);
     }
 
-    if (sessionRes.ok) {
-      const data = await sessionRes.json();
-      const role = data?.user?.role;
-      if (isAdminOnlyPath(pathname) && role !== 'ADMIN') {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
-      }
+    const session = await unsealData<SessionData>(seal, {
+      password: secret,
+      ttl: 60 * 60 * 24 * 30, // 30 days - matches remember-me; session cookies use ttl=0 when sealing
+    });
+
+    if (!session?.isLoggedIn) {
+      const signinUrl = new URL(`${basePath}/signin`, request.url);
+      signinUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(signinUrl);
+    }
+
+    if (isAdminOnlyPath(pathname) && session.role !== 'ADMIN') {
+      return NextResponse.redirect(new URL(`${basePath}/dashboard`, request.url));
     }
   } catch {
-    const signinUrl = new URL('/signin', request.url);
+    const signinUrl = new URL(`${basePath}/signin`, request.url);
+    signinUrl.searchParams.set('from', pathname);
     return NextResponse.redirect(signinUrl);
   }
 

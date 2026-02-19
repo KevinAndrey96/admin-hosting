@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -12,6 +13,8 @@ import { Suspense } from 'react';
 const TIPO_LABELS: Record<string, string> = {
   'contratar-dominio': 'Contratar dominio',
   'renovar-dominio': 'Renovar dominio',
+  'transferir-dominio': 'Transferir dominio',
+  'registrar-dominio': 'Registrar dominio',
   'contratar-hosting': 'Contratar hosting',
   'renovar-hosting': 'Renovar hosting',
 };
@@ -69,7 +72,7 @@ function PagoContent() {
   const currency = pagoData?.currency ?? 'COP';
   const precioConMercadoPago = basePrice * (1 + MERCADOPAGO_FEE);
   const isDomain = tipo.includes('dominio');
-  const itemLabel = pagoData?.itemLabel ?? (isDomain ? dominio : '');
+  const itemLabel = pagoData?.itemLabel ?? (isDomain && !hostingId ? dominio : pagoData?.itemLabel || '');
 
   useEffect(() => {
     if (!sessionLoading && !user) {
@@ -79,7 +82,10 @@ function PagoContent() {
 
   useEffect(() => {
     if (!tipo || sessionLoading || !user) return;
-    const hasParams = (tipo.includes('hosting') && (packageId || hostingId)) || (tipo.includes('dominio') && (domainId || dominio));
+    const hasParams =
+      (tipo.includes('hosting') && (packageId || hostingId)) ||
+      (tipo === 'transferir-dominio' && domainId) ||
+      (tipo.includes('dominio') && tipo !== 'transferir-dominio' && (domainId || dominio));
     if (!hasParams) return;
 
     setLoadingData(true);
@@ -174,6 +180,7 @@ function PagoContent() {
       formData.append('itemLabel', itemLabel || '');
       if (hostingId) formData.append('hostingId', hostingId);
       if (packageId) formData.append('packageId', packageId);
+      if (domainId) formData.append('domainId', domainId);
       const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
       const res = await fetch(`${basePath}/api/pago/comprobante`, {
         method: 'POST',
@@ -200,7 +207,7 @@ function PagoContent() {
     } finally {
       setUploading(false);
     }
-  }, [file, paymentModal, basePrice, tipo, itemLabel, hostingId, packageId, router]);
+  }, [file, paymentModal, basePrice, tipo, itemLabel, hostingId, packageId, domainId, router]);
 
   const closeModal = useCallback(() => {
     if (!uploading) {
@@ -239,7 +246,7 @@ function PagoContent() {
 
   return (
     <AdminLayout>
-      <div className="container-fluid" style={{ background: 'linear-gradient(180deg, #f8fafc 0%, #fff 100%)', minHeight: '100%', padding: '24px' }}>
+      <div className="container-fluid" style={{ background: 'var(--c-bkg-body)', minHeight: '100%', padding: '24px' }}>
         <div className="row justify-content-center">
           <div className="col-12" style={{ maxWidth: 560 }}>
             <Link
@@ -254,29 +261,29 @@ function PagoContent() {
               ref={cardRef}
               className="bd bdrs-3 p-30 mB-20"
               style={{
-                boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-                background: '#fff',
-                border: '1px solid rgba(0,0,0,0.06)',
+                boxShadow: 'var(--shadow-lg)',
+                background: 'var(--c-bkg-card)',
+                border: '1px solid var(--c-border)',
               }}
             >
               <div className="d-f ai-c gap-3 mB-25">
                 <div
                   className="d-f ai-c jc-c bdrs-50p"
-                  style={{ width: 56, height: 56, backgroundColor: 'rgba(34, 197, 94, 0.12)' }}
+                  style={{ width: 56, height: 56, backgroundColor: 'color-mix(in srgb, var(--c-success) 15%, var(--c-bkg-card))' }}
                 >
                   <i className="ti-wallet c-success" style={{ fontSize: 28 }} />
                 </div>
                 <div>
-                  <h4 className="m-0 c-grey-900 fw-600">{TIPO_LABELS[tipo] || 'Realizar pago'}</h4>
-                  <p className="m-0 mT-2 c-grey-600 fsz-sm">
+                  <h4 className="m-0 fw-600" style={{ color: 'var(--c-text-base)' }}>{TIPO_LABELS[tipo] || 'Realizar pago'}</h4>
+                  <p className="m-0 mT-2 fsz-sm" style={{ color: 'var(--c-text-muted)' }}>
                     {loadingData ? (dominio || packageId || hostingId || '...') : (itemLabel || '—')}
                   </p>
                 </div>
               </div>
 
               {!tipo && (
-                <div className="p-15 bdrs-3 mB-20" style={{ backgroundColor: 'rgba(255,193,7,0.15)', border: '1px solid rgba(255,193,7,0.4)' }}>
-                  <p className="m-0 fsz-sm c-grey-800">
+                <div className="p-15 bdrs-3 mB-20" style={{ backgroundColor: 'color-mix(in srgb, var(--c-warning) 15%, var(--c-bkg-card))', border: '1px solid color-mix(in srgb, var(--c-warning) 40%, var(--c-border))' }}>
+                  <p className="m-0 fsz-sm" style={{ color: 'var(--c-text-base)' }}>
                     <i className="ti-info-alt mR-5" />
                     Indica el tipo de operación (contratar/renovar dominio u hosting) desde la tabla correspondiente.
                   </p>
@@ -288,12 +295,12 @@ function PagoContent() {
                   <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Cargando...</span>
                   </div>
-                  <span className="mS-10 c-grey-600 fsz-sm">Cargando datos...</span>
+                  <span className="mS-10 fsz-sm" style={{ color: 'var(--c-text-muted)' }}>Cargando datos...</span>
                 </div>
               )}
 
               {errorData && (
-                <div className="p-15 bdrs-3 mB-20" style={{ backgroundColor: 'rgba(220,53,69,0.1)', border: '1px solid rgba(220,53,69,0.3)' }}>
+                <div className="p-15 bdrs-3 mB-20" style={{ backgroundColor: 'color-mix(in srgb, var(--c-danger) 12%, var(--c-bkg-card))', border: '1px solid color-mix(in srgb, var(--c-danger) 35%, var(--c-border))' }}>
                   <p className="m-0 fsz-sm c-danger">
                     <i className="ti-close mR-5" />
                     {errorData}
@@ -303,63 +310,63 @@ function PagoContent() {
 
               {(tipo && itemLabel && !loadingData && !errorData) && (
                 <>
-                  <div className="p-20 bdrs-3 mB-20" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <p className="m-0 fsz-sm c-grey-600 mB-5">Monto base</p>
-                    <p className="m-0 fsz-xl fw-600 c-grey-900">
+                  <div className="p-20 bdrs-3 mB-20" style={{ backgroundColor: 'var(--c-bkg-hover)', border: '1px solid var(--c-border)' }}>
+                    <p className="m-0 fsz-sm mB-5" style={{ color: 'var(--c-text-muted)' }}>Monto base</p>
+                    <p className="m-0 fsz-xl fw-600" style={{ color: 'var(--c-text-base)' }}>
                       {formatPrice(basePrice)}
                     </p>
                   </div>
 
                   {basePrice > 0 ? (
                     <>
-                  <h6 className="fw-600 c-grey-800 mB-15">Pagos sin comisión</h6>
+                  <h6 className="fw-600 mB-15" style={{ color: 'var(--c-text-base)' }}>Pagos sin comisión</h6>
                   <div
                     role="button"
                     tabIndex={0}
                     className="p-20 bdrs-3 mB-20 cur-p"
-                    style={{ backgroundColor: 'rgba(34, 197, 94, 0.06)', border: '1px solid rgba(34, 197, 94, 0.2)' }}
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--c-success) 8%, var(--c-bkg-card))', border: '1px solid color-mix(in srgb, var(--c-success) 25%, var(--c-border))' }}
                     onClick={() => setSectionModal('sin-comision')}
                     onKeyDown={(e) => e.key === 'Enter' && setSectionModal('sin-comision')}
                   >
                     <div className="d-f fxd-c gap-3">
                       <div>
-                        <p className="m-0 fw-600 c-grey-900">Pago sin comisión adicional</p>
-                        <p className="m-0 fsz-sm c-grey-600">Bancolombia, Daviplata, Nequi o Bre-B. Total: <strong className="fw-700 c-grey-900">{formatPrice(basePrice)}</strong></p>
+                        <p className="m-0 fw-600" style={{ color: 'var(--c-text-base)' }}>Pago sin comisión adicional</p>
+                        <p className="m-0 fsz-sm" style={{ color: 'var(--c-text-muted)' }}>Bancolombia, Daviplata, Nequi o Bre-B. Total: <strong style={{ color: 'var(--c-text-base)' }}>{formatPrice(basePrice)}</strong></p>
                       </div>
                     </div>
                   </div>
 
-                  <h6 className="fw-600 c-grey-800 mB-15">MercadoPago</h6>
+                  <h6 className="fw-600 mB-15" style={{ color: 'var(--c-text-base)' }}>MercadoPago</h6>
                   <div
                     role="button"
                     tabIndex={0}
                     className="d-f ai-c jc-sb p-20 bdrs-3 mB-20 cur-p"
-                    style={{ backgroundColor: 'rgba(0, 123, 255, 0.06)', border: '1px solid rgba(0, 123, 255, 0.2)' }}
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--c-info) 8%, var(--c-bkg-card))', border: '1px solid color-mix(in srgb, var(--c-info) 25%, var(--c-border))' }}
                     onClick={() => setSectionModal('mercadopago')}
                     onKeyDown={(e) => e.key === 'Enter' && setSectionModal('mercadopago')}
                   >
                     <div>
-                      <p className="m-0 fw-600 c-grey-900">Incluye 5% de comisión por transacción</p>
-                      <p className="m-0 fsz-sm c-grey-600">A través de un link de pago. Total: <strong className="fw-700 c-grey-900">{formatPrice(Math.round(precioConMercadoPago))}</strong></p>
+                      <p className="m-0 fw-600" style={{ color: 'var(--c-text-base)' }}>Incluye 5% de comisión por transacción</p>
+                      <p className="m-0 fsz-sm" style={{ color: 'var(--c-text-muted)' }}>A través de un link de pago. Total: <strong style={{ color: 'var(--c-text-base)' }}>{formatPrice(Math.round(precioConMercadoPago))}</strong></p>
                     </div>
                   </div>
 
-                  <hr className="mB-0 mT-30" style={{ borderColor: '#cbd5e1', borderTopWidth: 1 }} />
-                  <div className="p-25 bdrs-3 mT-30" style={{ backgroundColor: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                    <p className="m-0 fsz-sm c-grey-700 mB-0">
+                  <hr className="mB-0 mT-30" style={{ borderColor: 'var(--c-border)', borderTopWidth: 1 }} />
+                  <div className="p-25 bdrs-3 mT-30" style={{ backgroundColor: 'color-mix(in srgb, var(--c-primary) 8%, var(--c-bkg-card))', border: '1px solid color-mix(in srgb, var(--c-primary) 25%, var(--c-border))' }}>
+                    <p className="m-0 fsz-sm mB-0" style={{ color: 'var(--c-text-muted)' }}>
                       <i className="ti-info-alt mR-5" />
                       Una vez confirmado el pago se procederá a la {tipo.includes('renovar') ? 'renovación' : 'activación'} del servicio.
                     </p>
                     {tipo.includes('renovar') && pagoData?.currentExpirationDate && (
-                      <p className="m-0 fsz-sm c-grey-700 mT-10">
+                      <p className="m-0 fsz-sm mT-10" style={{ color: 'var(--c-text-muted)' }}>
                         Se renovará por un año más. Fecha anterior de expiración: <strong>{formatDate(pagoData.currentExpirationDate)}</strong>. Nueva fecha de expiración: <strong>{formatDate(addOneYear(pagoData.currentExpirationDate))}</strong>.
                       </p>
                     )}
                   </div>
                     </>
                   ) : (
-                    <div className="p-20 bdrs-3" style={{ backgroundColor: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)' }}>
-                      <p className="m-0 fsz-sm c-grey-800">
+                    <div className="p-20 bdrs-3" style={{ backgroundColor: 'color-mix(in srgb, var(--c-success) 12%, var(--c-bkg-card))', border: '1px solid color-mix(in srgb, var(--c-success) 30%, var(--c-border))' }}>
+                      <p className="m-0 fsz-sm" style={{ color: 'var(--c-text-base)' }}>
                         <i className="ti-check mR-5 c-success" />
                         Este servicio no tiene costo asociado. Contacta al administrador para proceder.
                       </p>
@@ -418,14 +425,14 @@ function PagoContent() {
               <div className="modal-body">
                 {sectionModal === 'sin-comision' ? (
                   <>
-                    <p className="fsz-sm c-grey-600 mB-15">Selecciona el medio de pago. Total: <strong className="fw-700 c-grey-900">{formatPrice(basePrice)}</strong></p>
+                    <p className="fsz-sm mB-15" style={{ color: 'var(--c-text-muted)' }}>Selecciona el medio de pago. Total: <strong style={{ color: 'var(--c-text-base)' }}>{formatPrice(basePrice)}</strong></p>
                     <div className="d-f gap-3 jc-c" style={{ flexWrap: 'nowrap' }}>
                       {PAYMENT_METHODS.map((pm) => (
                         <button
                           key={pm.id}
                           type="button"
                           className="btn btn-outline-secondary p-15 bdrs-3 d-f fxd-c ai-c jc-c"
-                          style={{ minWidth: 100, border: '1px solid #dee2e6' }}
+                          style={{ minWidth: 100, border: '1px solid var(--c-border)' }}
                           onClick={() => {
                             setSectionModal(null);
                             setPaymentModal(pm);
@@ -438,14 +445,14 @@ function PagoContent() {
                             height={LOGO_SIZE}
                             style={{ objectFit: 'contain' }}
                           />
-                          <span className="fsz-xs c-grey-700 mT-5 ta-c">{pm.name}</span>
+                          <span className="fsz-xs mT-5 ta-c" style={{ color: 'var(--c-text-muted)' }}>{pm.name}</span>
                         </button>
                       ))}
                     </div>
                   </>
                 ) : (
                   <>
-                    <p className="fsz-sm c-grey-600 mB-15 ta-c">Total: <strong className="fw-700 c-grey-900">{formatPrice(Math.round(precioConMercadoPago))}</strong> (incluye 5% de comisión)</p>
+                    <p className="fsz-sm mB-15 ta-c" style={{ color: 'var(--c-text-muted)' }}>Total: <strong style={{ color: 'var(--c-text-base)' }}>{formatPrice(Math.round(precioConMercadoPago))}</strong> (incluye 5% de comisión)</p>
                     <div className="d-f ai-c jc-c gap-3 mB-15">
                       <img
                         src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/payment-methods/mercadopago.png`}
@@ -454,7 +461,7 @@ function PagoContent() {
                         height={LOGO_SIZE}
                         style={{ objectFit: 'contain' }}
                       />
-                      <span className="fw-600 c-grey-900">MercadoPago</span>
+                      <span className="fw-600" style={{ color: 'var(--c-text-base)' }}>MercadoPago</span>
                     </div>
                     {settings?.mercadopago_payment_link && (
                       <div className="ta-c">
@@ -518,20 +525,20 @@ function PagoContent() {
                 />
               </div>
               <div className="modal-body">
-                <div className="p-15 bdrs-3 mB-15" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                  <p className="m-0 fsz-sm c-grey-600 mB-5">Monto a pagar</p>
-                  <p className="m-0 fsz-xl fw-700 c-grey-900">
+                <div className="p-15 bdrs-3 mB-15" style={{ backgroundColor: 'var(--c-bkg-hover)', border: '1px solid var(--c-border)' }}>
+                  <p className="m-0 fsz-sm mB-5" style={{ color: 'var(--c-text-muted)' }}>Monto a pagar</p>
+                  <p className="m-0 fsz-xl fw-700" style={{ color: 'var(--c-text-base)' }}>
                     {formatPrice(basePrice)}
                   </p>
                 </div>
-                <p className="c-grey-800 mB-15">
-                  Por favor realiza tu pago a este número <strong className="c-grey-900">{paymentNumber || '—'}</strong> y adjunta el comprobante de pago.
+                <p className="mB-15" style={{ color: 'var(--c-text-base)' }}>
+                  Por favor realiza tu pago a este número <strong>{paymentNumber || '—'}</strong> y adjunta el comprobante de pago.
                 </p>
                 <div
                   className={`bdrs-3 p-20 ta-c cur-p ${dragOver ? 'bgc-primary-50' : ''}`}
                   style={{
-                    border: `2px dashed ${dragOver ? 'var(--c-primary)' : '#cbd5e1'}`,
-                    backgroundColor: dragOver ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+                    border: `2px dashed ${dragOver ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                    backgroundColor: dragOver ? 'color-mix(in srgb, var(--c-primary) 8%, var(--c-bkg-card))' : 'transparent',
                   }}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -546,12 +553,12 @@ function PagoContent() {
                     onChange={handleFileChange}
                   />
                   {file ? (
-                    <p className="m-0 fsz-sm c-grey-800">
+                    <p className="m-0 fsz-sm" style={{ color: 'var(--c-text-base)' }}>
                       <i className="ti-file mR-5" />
                       {file.name} ({(file.size / 1024).toFixed(1)} KB)
                     </p>
                   ) : (
-                    <p className="m-0 fsz-sm c-grey-600">
+                    <p className="m-0 fsz-sm" style={{ color: 'var(--c-text-muted)' }}>
                       Arrastra aquí tu comprobante (imagen o PDF, máx. 5 MB) o haz clic para seleccionar
                     </p>
                   )}

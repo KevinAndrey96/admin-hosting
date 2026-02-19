@@ -5,11 +5,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
+import { useTheme } from '@/app/hooks/useTheme';
 
 const MIN_PASSWORD_LENGTH = 8;
 
 export default function SignUpPage() {
   const { logoUrl, companyName } = useSettings();
+  const { theme, toggleTheme, mounted } = useTheme();
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -81,7 +83,37 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="d-f ai-c jc-c" style={{ minHeight: '100vh', background: 'var(--c-bkg-body)' }}>
+    <div className="d-f ai-c jc-c" style={{ minHeight: '100vh', background: 'var(--c-bkg-body)', position: 'relative' }}>
+      {mounted && (
+        <div
+          className="form-check form-switch"
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <label className="form-check-label fsz-sm c-grey-700" htmlFor="signup-theme-toggle">
+            <i className="ti-sun" style={{ marginRight: 4 }} />
+            Light
+          </label>
+          <input
+            type="checkbox"
+            className="form-check-input"
+            id="signup-theme-toggle"
+            checked={theme === 'dark'}
+            onChange={toggleTheme}
+            style={{ cursor: 'pointer' }}
+          />
+          <label className="form-check-label fsz-sm c-grey-700" htmlFor="signup-theme-toggle">
+            Dark
+            <i className="ti-moon" style={{ marginLeft: 4 }} />
+          </label>
+        </div>
+      )}
       <div className="bd bgc-white p-40 bdrs-10" style={{ width: '100%', maxWidth: 400, boxShadow: 'var(--shadow-lg)' }}>
         <div className="ta-c mB-30">
           <Link href="/" className="td-n">

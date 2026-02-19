@@ -173,7 +173,7 @@ export default function ClientsPage() {
 
   return (
     <AdminLayout>
-      <div className="container-fluid" style={{ background: '#fff', minHeight: '100%', padding: '24px' }}>
+      <div className="container-fluid" style={{ background: 'var(--c-bkg-body)', minHeight: '100%', padding: '24px' }}>
         <div className="row mB-20">
           <div className="col-12 d-f jc-sb ai-c">
             <div>

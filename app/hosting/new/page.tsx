@@ -148,7 +148,7 @@ export default function NewHostingPage() {
     <AdminLayout>
       <div
         className="container-fluid d-f fxd-c ai-c"
-        style={{ background: '#fff', minHeight: '100%', padding: '24px' }}
+        style={{ background: 'var(--c-bkg-body)', minHeight: '100%', padding: '24px' }}
       >
         <div className="row mB-20 w-100" style={{ maxWidth: 640 }}>
           <div className="col-12">

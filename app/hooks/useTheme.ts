@@ -39,7 +39,7 @@ export function useTheme() {
       setThemeState(stored);
       document.documentElement.setAttribute('data-theme', stored);
     } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const initial = prefersDark ? 'dark' : 'light';
       setThemeState(initial);
       document.documentElement.setAttribute('data-theme', initial);

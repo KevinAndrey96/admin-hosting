@@ -1,6 +1,7 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '../components/AdminLayout';
@@ -16,6 +17,7 @@ type Hosting = {
   packageName: string;
   packageColorHex?: string | null;
   diskSpaceQuotaMb?: number | null;
+  diskUsed?: string | null;
   salePrice: number;
   currency: string;
   domainIDs: string[];
@@ -43,6 +45,15 @@ type Package = {
 
 function fmtMb(mb: number | null): string {
   if (mb == null) return 'Ilimitado';
+  return `${mb.toLocaleString()} MB`;
+}
+
+/** Formats WHM diskused (e.g. "93M", "2065M") to match Disco column style */
+function fmtDiskUsed(diskused: string | null | undefined): string {
+  if (!diskused || typeof diskused !== 'string') return '-';
+  const m = diskused.trim().toUpperCase().match(/^(\d+(?:\.\d+)?)\s*M(?:B)?$/);
+  if (!m) return diskused;
+  const mb = Math.round(parseFloat(m[1]));
   return `${mb.toLocaleString()} MB`;
 }
 
@@ -87,6 +98,31 @@ export default function HostingPage() {
   const [renewModal, setRenewModal] = useState<Hosting | null>(null);
   const [renewing, setRenewing] = useState(false);
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [suspendingId, setSuspendingId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const fetchHostings = useCallback(async () => {
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const url = `${basePath}/api/hosting?_t=${Date.now()}`;
+      const res = await fetch(url, {
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const normalized = (Array.isArray(data) ? data : []).map((h: Hosting) => ({
+          ...h,
+          serviceStatus: String(h.serviceStatus ?? 'ENABLED').toUpperCase(),
+        }));
+        setHostings(normalized);
+      }
+    } catch {
+      setHostings([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!sessionLoading && !user) {
@@ -95,25 +131,10 @@ export default function HostingPage() {
   }, [router, sessionLoading, user]);
 
   useEffect(() => {
-    const fetchHostings = async () => {
-      try {
-        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-        const res = await fetch(`${basePath}/api/hosting`, { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          setHostings(data);
-        }
-      } catch {
-        setHostings([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (user) {
       fetchHostings();
     }
-  }, [user]);
+  }, [user, fetchHostings]);
 
   useEffect(() => {
     if (!redirectModal) return;
@@ -234,6 +255,77 @@ export default function HostingPage() {
     }
   };
 
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/hosting/sync`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const msg = data.errors?.length
+          ? `${data.message}\n\nErrores:\n${data.errors.join('\n')}`
+          : data.message;
+        alert(msg);
+        await fetchHostings();
+      } else {
+        alert(data.error || 'Error al sincronizar');
+      }
+    } catch {
+      alert('Error de conexión');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSuspend = async (h: Hosting, action: 'suspend' | 'unsuspend') => {
+    const nextStatus = action === 'suspend' ? 'SUSPENDED' : 'ENABLED';
+    setSuspendingId(h.id);
+    setHostings((prev) =>
+      prev.map((host) =>
+        host.id === h.id ? { ...host, serviceStatus: nextStatus } : host
+      )
+    );
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/hosting/${h.id}/suspend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const newStatus = (data.serviceStatus && String(data.serviceStatus).toUpperCase()) || nextStatus;
+        setHostings((prev) =>
+          prev.map((host) =>
+            host.id === h.id ? { ...host, serviceStatus: newStatus } : host
+          )
+        );
+        // Refetch to ensure UI stays in sync with server
+        setTimeout(() => fetchHostings(), 150);
+      } else {
+        setHostings((prev) =>
+          prev.map((host) =>
+            host.id === h.id ? { ...host, serviceStatus: h.serviceStatus } : host
+          )
+        );
+        alert(data.error || `Error al ${action === 'suspend' ? 'suspender' : 'desuspender'}`);
+      }
+    } catch {
+      setHostings((prev) =>
+        prev.map((host) =>
+          host.id === h.id ? { ...host, serviceStatus: h.serviceStatus } : host
+        )
+      );
+      alert('Error de conexión');
+    } finally {
+      setSuspendingId(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteModal) return;
     setDeleting(true);
@@ -283,7 +375,7 @@ export default function HostingPage() {
 
   return (
     <AdminLayout>
-      <div className="container-fluid" style={{ background: '#fff', minHeight: '100%', padding: '24px' }}>
+      <div className="container-fluid" style={{ background: 'var(--c-bkg-body)', minHeight: '100%', padding: '24px' }}>
         <div className="row mB-20">
           <div className="col-12 d-f jc-sb ai-c">
             <div>
@@ -293,10 +385,22 @@ export default function HostingPage() {
               </p>
             </div>
             {user?.role === 'ADMIN' && (
-              <Link href="/hosting/new" className="btn btn-primary">
-                <i className="ti-plus mR-5" />
-                Nuevo hosting
-              </Link>
+              <div className="d-f gap-2 ai-c">
+                <button
+                  type="button"
+                  className="btn btn-outline-primary"
+                  onClick={handleSync}
+                  disabled={syncing}
+                  title="Sincroniza WHM con este panel: activa o suspende cada cuenta en el servidor según su estado en la base de datos."
+                >
+                  <i className={`ti-reload mR-5 ${syncing ? 'ti-spin' : ''}`} />
+                  {syncing ? 'Sincronizando...' : 'Sincronizar'}
+                </button>
+                <Link href="/hosting/new" className="btn btn-primary">
+                  <i className="ti-plus mR-5" />
+                  Nuevo hosting
+                </Link>
+              </div>
             )}
           </div>
         </div>
@@ -317,7 +421,7 @@ export default function HostingPage() {
                 <div
                   key={p.id}
                   className="bd bgc-white bdrs-3 ov-h"
-                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)', minWidth: 220, flex: '1 1 220px', maxWidth: 320 }}
+                  style={{ boxShadow: 'var(--shadow-card)', minWidth: 220, flex: '1 1 220px', maxWidth: 320 }}
                 >
                   <div
                     className="ta-c p-20"
@@ -327,23 +431,23 @@ export default function HostingPage() {
                   </div>
                   <div className="p-20">
                     <ul className="m-0 p-0" style={{ listStyle: 'none' }}>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-wallet c-grey-600" style={{ fontSize: 14 }} />
                         $ {p.salePrice.toLocaleString('es-CO')}/año
                       </li>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-harddrive c-grey-600" style={{ fontSize: 14 }} />
                         {fmtMb(p.diskSpaceQuotaMb)} disco
                       </li>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-pulse c-grey-600" style={{ fontSize: 14 }} />
                         {fmtMb(p.bandwidthLimitMb)} de banda
                       </li>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-email c-grey-600" style={{ fontSize: 14 }} />
                         {fmtLimit(p.maxEmailAccounts)} cuentas email
                       </li>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-world c-grey-600" style={{ fontSize: 14 }} />
                         {p.maxAddonDomains != null ? `${p.maxAddonDomains.toLocaleString()} dominios adicionales` : 'Dominios ilimitados'}
                       </li>
@@ -355,19 +459,19 @@ export default function HostingPage() {
                         )}
                         {p.includedDomains} dominio{p.includedDomains !== 1 ? 's' : ''} incluido{p.includedDomains !== 1 ? 's' : ''}
                       </li>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-pencil c-grey-600" style={{ fontSize: 14 }} />
                         Gestor de WordPress incluido
                       </li>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-package c-grey-600" style={{ fontSize: 14 }} />
                         PHP, Node.js, Python y Ruby
                       </li>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-bar-chart c-grey-600" style={{ fontSize: 14 }} />
                         Métricas de visitantes incluidas
                       </li>
-                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+                      <li className="c-grey-700 fsz-sm bdB p-10 d-f ai-c gap-2" style={{ borderColor: 'var(--c-border)' }}>
                         <i className="ti-shield c-grey-600" style={{ fontSize: 14 }} />
                         Antivirus y protección
                       </li>
@@ -410,7 +514,7 @@ export default function HostingPage() {
         </div>
         )}
 
-        <div className="bd bgc-white bdrs-3 p-20" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <div className="bd bgc-white bdrs-3 p-20" style={{ boxShadow: 'var(--shadow-card)' }}>
           {loading ? (
             <div className="p-20 ta-c c-grey-700">Cargando...</div>
           ) : hostings.length === 0 ? (
@@ -503,6 +607,9 @@ export default function HostingPage() {
                       <th className="c-grey-800 ta-e" style={{ minWidth: 90 }}>
                         Disco
                       </th>
+                      <th className="c-grey-800 ta-e" style={{ minWidth: 100 }}>
+                        Espacio usado
+                      </th>
                       <th
                         className="c-grey-800 cur-p ta-e"
                         style={{ minWidth: 90 }}
@@ -535,9 +642,11 @@ export default function HostingPage() {
                         Servicio
                         <SortIcon col="serviceStatus" />
                       </th>
-                      <th className="ta-c c-grey-800" style={{ minWidth: 120 }}>
-                        Acceso
-                      </th>
+                      {user?.role !== 'ADMIN' && (
+                        <th className="ta-c c-grey-800" style={{ minWidth: 120 }}>
+                          Acceso
+                        </th>
+                      )}
                       {user?.role === 'ADMIN' && (
                         <th className="ta-e c-grey-800" style={{ minWidth: 90 }}>
                           Acciones
@@ -593,6 +702,9 @@ export default function HostingPage() {
                           {fmtMb(h.diskSpaceQuotaMb ?? null)}
                         </td>
                         <td className="c-grey-800 ta-e">
+                          {fmtDiskUsed(h.diskUsed)}
+                        </td>
+                        <td className="c-grey-800 ta-e">
                           $ {h.salePrice.toLocaleString('es-CO')}
                         </td>
                         <td className="c-grey-800">
@@ -617,55 +729,80 @@ export default function HostingPage() {
                           </span>
                         </td>
                         <td>
-                          <span
-                            className="badge rounded-pill fsz-xs"
-                            style={{
-                              backgroundColor:
-                                h.serviceStatus === 'ENABLED'
-                                  ? '#20c997'
-                                  : h.serviceStatus === 'SUSPENDED'
-                                    ? '#fd7e14'
-                                    : '#6c757d',
-                              color: '#fff',
-                            }}
-                          >
-                            {SERVICE_LABELS[h.serviceStatus] ?? h.serviceStatus}
-                          </span>
-                        </td>
-                        <td className="ta-c">
-                          <div className="d-f gap-2 jc-c fxw-w">
-                            {user?.role !== 'ADMIN' && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-outline-primary p-8 m-0"
-                                  onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/cpanel', title: 'cPanel' })}
-                                  title="Acceder a cPanel"
-                                >
-                                  <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/cpanel.png`} alt="cPanel" width={20} height={20} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-outline-secondary p-8 m-0"
-                                  onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/webmail', title: 'Webmail' })}
-                                  title="Acceder a Webmail"
-                                >
-                                  <i className="ti-email" style={{ fontSize: 18 }} />
-                                </button>
-                              </>
-                            )}
-                            {h.salePrice > 0 && (
-                              <Link
-                                href={`/pago?tipo=renovar-hosting&hostingId=${encodeURIComponent(h.id)}`}
-                                className="btn btn-sm btn-success p-8 m-0"
-                                style={{ color: '#fff' }}
-                                title="Renovar ahora"
+                          {user?.role === 'ADMIN' && h.serviceStatus !== 'CANCELLED' ? (
+                            <div
+                              className="form-check form-switch d-f ai-c gap-2"
+                              style={{ margin: 0, minHeight: 24 }}
+                            >
+                              <input
+                                type="checkbox"
+                                className="form-check-input"
+                                id={`suspend-${h.id}`}
+                                checked={h.serviceStatus === 'ENABLED'}
+                                onChange={() => handleSuspend(h, h.serviceStatus === 'ENABLED' ? 'suspend' : 'unsuspend')}
+                                disabled={suspendingId === h.id}
+                                title={h.serviceStatus === 'ENABLED' ? 'Deshabilitar (suspender en cPanel)' : 'Habilitar (desuspender en cPanel)'}
+                              />
+                              <label
+                                className="form-check-label fsz-sm c-grey-700 m-0"
+                                htmlFor={`suspend-${h.id}`}
                               >
-                                <i className="ti-wallet" style={{ fontSize: 18 }} />
-                              </Link>
-                            )}
-                          </div>
+                                {suspendingId === h.id
+                                  ? 'Actualizando...'
+                                  : h.serviceStatus === 'ENABLED'
+                                    ? 'Habilitado'
+                                    : 'Deshabilitado'}
+                              </label>
+                            </div>
+                          ) : (
+                            <span
+                              className="badge rounded-pill fsz-xs"
+                              style={{
+                                backgroundColor:
+                                  h.serviceStatus === 'ENABLED'
+                                    ? '#20c997'
+                                    : h.serviceStatus === 'SUSPENDED'
+                                      ? '#fd7e14'
+                                      : '#6c757d',
+                                color: '#fff',
+                              }}
+                            >
+                              {SERVICE_LABELS[h.serviceStatus] ?? h.serviceStatus}
+                            </span>
+                          )}
                         </td>
+                        {user?.role !== 'ADMIN' && (
+                          <td className="ta-c">
+                            <div className="d-f gap-2 jc-c fxw-w">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary p-8 m-0"
+                                onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/cpanel', title: 'cPanel' })}
+                                title="Acceder a cPanel"
+                              >
+                                <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/cpanel.png`} alt="cPanel" width={20} height={20} />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-secondary p-8 m-0"
+                                onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/webmail', title: 'Webmail' })}
+                                title="Acceder a Webmail"
+                              >
+                                <i className="ti-email" style={{ fontSize: 18 }} />
+                              </button>
+                              {h.salePrice > 0 && (
+                                <Link
+                                  href={`/pago?tipo=renovar-hosting&hostingId=${encodeURIComponent(h.id)}`}
+                                  className="btn btn-sm btn-success p-8 m-0"
+                                  style={{ color: '#fff' }}
+                                  title="Renovar ahora"
+                                >
+                                  <i className="ti-wallet" style={{ fontSize: 18 }} />
+                                </Link>
+                              )}
+                            </div>
+                          </td>
+                        )}
                         {user?.role === 'ADMIN' && (
                           <td className="ta-e">
                             <div className="d-f gap-2 jc-e">

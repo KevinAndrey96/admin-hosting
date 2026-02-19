@@ -22,6 +22,7 @@ type Domain = {
   renewalDate: string;
   nextBillingDate: string;
   paymentStatus: string;
+  status?: string;
   transferLock: boolean;
   healthStatus: string;
   createdAt: string;
@@ -73,6 +74,19 @@ export default function DomainsPage() {
     error?: string;
   } | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [transferRequests, setTransferRequests] = useState<
+    Array<{
+      id: string;
+      fqdn: string;
+      status: string;
+      salePrice: number;
+      currency: string;
+      createdAt: string;
+      user: { fullName: string; email: string; phone?: string | null };
+    }>
+  >([]);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!priceInfoOpen) return;
@@ -94,18 +108,40 @@ export default function DomainsPage() {
     return '#dc3545'; // red - 5xx server error
   };
 
+  /**
+   * Ping desde el navegador - evita que el servidor necesite conexiones salientes.
+   * cPanel y muchos shared hosts bloquean outbound HTTP desde Node.js.
+   */
   const pingDomain = async (fqdn: string, id: string) => {
     setPingStatus((prev) => ({ ...prev, [id]: 'loading' }));
+    const setResult = (code: number | null) =>
+      setPingStatus((prev) => ({ ...prev, [id]: code }));
+
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/.test(fqdn)) {
+      setResult(null);
+      return;
+    }
+
+    const fetchWithTimeout = (url: string, ms: number) => {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), ms);
+      return fetch(url, {
+        mode: 'no-cors',
+        cache: 'no-store',
+        signal: ctrl.signal,
+      }).finally(() => clearTimeout(t));
+    };
+
     try {
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-      const res = await fetch(`${basePath}/api/domains/ping?fqdn=${encodeURIComponent(fqdn)}`, {
-        credentials: 'include',
-      });
-      const data = await res.json().catch(() => ({}));
-      const statusCode = typeof data.statusCode === 'number' ? data.statusCode : null;
-      setPingStatus((prev) => ({ ...prev, [id]: statusCode }));
+      await fetchWithTimeout(`https://${fqdn}/`, 8000);
+      setResult(200);
     } catch {
-      setPingStatus((prev) => ({ ...prev, [id]: null }));
+      try {
+        await fetchWithTimeout(`http://${fqdn}/`, 8000);
+        setResult(200);
+      } catch {
+        setResult(null);
+      }
     }
   };
 
@@ -135,6 +171,38 @@ export default function DomainsPage() {
       fetchDomains();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+    const fetchTransferRequests = async () => {
+      try {
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+        const res = await fetch(`${basePath}/api/domains/transfer-requests`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setTransferRequests(data);
+        }
+      } catch {
+        setTransferRequests([]);
+      }
+    };
+
+    const fetchRegistrationRequests = async () => {
+      try {
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+        const res = await fetch(`${basePath}/api/domains/registration-requests`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setRegistrationRequests(data);
+        }
+      } catch {
+        setRegistrationRequests([]);
+      }
+    };
+
+    fetchTransferRequests();
+    fetchRegistrationRequests();
+  }, [user?.role]);
 
   const filteredData = useMemo(() => {
     if (!search.trim()) return domains;
@@ -176,6 +244,31 @@ export default function DomainsPage() {
     });
   }, [domains]);
 
+  type RegistrationRequest = {
+  id: string;
+  fqdn: string;
+  status: string;
+  salePrice: number;
+  currency: string;
+  createdAt: string;
+  withHosting: boolean;
+  registrationPackageID?: string | null;
+  user: {
+    fullName: string;
+    email: string;
+  };
+  hostingPackage?: {
+    name: string;
+  };
+};
+
+const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([]);
+
+  const hasTransferDomains = useMemo(
+    () => domains.some((d) => d.status === 'PENDING_PAYMENT' || d.status === 'PENDING_APPROVAL' || d.status === 'REGISTRATION_REQUESTED'),
+    [domains]
+  );
+
   const reactivationPenaltyRaw = settings?.domain_reactivation_penalty?.trim() ?? '';
   const reactivationPenalty = reactivationPenaltyRaw
     ? `$ ${Number(reactivationPenaltyRaw).toLocaleString('es-CO')}`
@@ -194,6 +287,7 @@ export default function DomainsPage() {
         pingDomain(d.fqdn, d.id);
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- domainIds is the stable trigger; adding paginatedData/pingStatus would cause unwanted re-pings
   }, [domainIds]);
 
   const handleRenew = async () => {
@@ -289,13 +383,93 @@ export default function DomainsPage() {
       <span className="ms-1 c-grey-500" style={{ opacity: 0.5 }}>⇅</span>
     );
 
+  const handleApproveTransfer = async (id: string) => {
+    setApprovingId(id);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      
+      // Check if this is a domain registration request
+      const domain = domains.find(d => d.id === id);
+      if (domain?.status === 'REGISTRATION_REQUESTED') {
+        // Handle domain registration approval
+        const res = await fetch(`${basePath}/api/domains/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domainId: id }),
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          const listRes = await fetch(`${basePath}/api/domains`, { credentials: 'include' });
+          if (listRes.ok) {
+            const list = await listRes.json();
+            setDomains(list);
+          }
+          alert(data.message || 'Registro de dominio aprobado');
+        } else {
+          alert(data.message || data.error || 'Error al aprobar');
+        }
+      } else {
+        // Handle transfer approval (existing logic)
+        const res = await fetch(`${basePath}/api/domains/transfer-requests/${id}/approve`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setTransferRequests((prev) => prev.filter((r) => r.id !== id));
+          const listRes = await fetch(`${basePath}/api/domains`, { credentials: 'include' });
+          if (listRes.ok) {
+            const list = await listRes.json();
+            setDomains(list);
+          }
+          alert(data.message || 'Transferencia aprobada');
+        } else {
+          alert(data.error || 'Error al aprobar');
+        }
+      }
+    } catch {
+      alert('Error de conexión');
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleRejectTransfer = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas rechazar esta solicitud de transferencia?')) {
+      return;
+    }
+
+    setRejectingId(id);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/domains/transfer-requests/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTransferRequests((prev) => prev.filter((r) => r.id !== id));
+        alert('Solicitud rechazada');
+      } else {
+        alert(data.error || 'Error al rechazar');
+      }
+    } catch {
+      alert('Error de conexión');
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   if (sessionLoading || !user) {
     return null;
   }
 
   return (
     <AdminLayout>
-      <div className="container-fluid" style={{ background: '#fff', minHeight: '100%', padding: '24px' }}>
+      <div className="container-fluid" style={{ background: 'var(--c-bkg-body)', minHeight: '100%', padding: '24px' }}>
         <div className="row mB-20">
           <div className="col-12 d-f jc-sb ai-c">
             <div>
@@ -305,15 +479,181 @@ export default function DomainsPage() {
               </p>
             </div>
             {user?.role === 'ADMIN' && (
-              <Link href="/domains/new" className="btn btn-primary">
-                <i className="ti-plus mR-5" />
-                Nuevo dominio
-              </Link>
+              <div className="d-f gap-2">
+                <Link href="/domains/transfer-in" className="btn btn-outline-primary">
+                  <i className="ti-arrow-down mR-5" />
+                  Transferir aquí
+                </Link>
+                <Link href="/domains/new" className="btn btn-primary">
+                  <i className="ti-plus mR-5" />
+                  Nuevo dominio
+                </Link>
+              </div>
             )}
           </div>
         </div>
 
-        <div className="bd bgc-white bdrs-3 p-25 mB-20" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)', background: 'linear-gradient(135deg, #f8f9fa 0%, #fff 100%)' }}>
+        {user?.role === 'ADMIN' && transferRequests.length > 0 && (
+          <div className="bd bgc-white bdrs-3 p-25 mB-20" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <h5 className="m-0 mB-15 c-grey-900 fw-600">
+              <i className="ti-arrow-down mR-8" />
+              Solicitudes de transferencia pendientes
+            </h5>
+            <p className="m-0 mB-15 c-grey-600 fsz-sm">
+              Dominios en proceso de transferencia. Los que están &quot;Pendiente de aprobación&quot; ya tienen pago y comprobante; aprueba para ejecutar la transferencia en Spaceship.
+            </p>
+            <div className="table-responsive">
+              <table className="table table-hover m-0">
+                <thead>
+                  <tr>
+                    <th>Dominio</th>
+                    <th>Estado</th>
+                    <th>Cliente</th>
+                    <th>Email</th>
+                    <th>Monto</th>
+                    <th>Fecha</th>
+                    <th className="ta-e">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transferRequests.map((r) => (
+                    <tr key={r.id}>
+                      <td className="fw-600">{r.fqdn}</td>
+                      <td>
+                        <span
+                          className="badge fsz-xs"
+                          style={{
+                            backgroundColor: r.status === 'PENDING_APPROVAL' ? '#17a2b8' : '#6c757d',
+                            color: '#fff',
+                          }}
+                        >
+                          {r.status === 'PENDING_APPROVAL' ? 'Pendiente de aprobación' : 'Pendiente de pago'}
+                        </span>
+                      </td>
+                      <td>{r.clientName}</td>
+                      <td>{r.email}</td>
+                      <td>${Number(r.amount).toLocaleString('es-CO')}</td>
+                      <td>{dayjs(r.createdAt).format('DD/MM/YYYY')}</td>
+                      <td className="ta-e">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-success p-8 m-0"
+                          onClick={() => handleApproveTransfer(r.id)}
+                          disabled={approvingId === r.id}
+                        >
+                          {approvingId === r.id ? (
+                            <i className="ti-reload ti-spin" />
+                          ) : (
+                            <i className="ti-check" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger p-8 m-0"
+                          onClick={() => handleRejectTransfer(r.id)}
+                          disabled={rejectingId === r.id}
+                        >
+                          {rejectingId === r.id ? (
+                            <i className="ti-reload ti-spin" />
+                          ) : (
+                            <i className="ti-close" />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {user?.role === 'ADMIN' && registrationRequests.length > 0 && (
+          <div className="bd bgc-white bdrs-3 p-25 mB-20" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <h5 className="m-0 mB-15 c-grey-900 fw-600">
+              <i className="ti-plus mR-8" />
+              Solicitudes de registro de dominio pendientes
+            </h5>
+            <p className="m-0 mB-15 c-grey-600 fsz-sm">
+              Nuevos dominios solicitados por clientes. Aprueba para procesar el registro y activar el servicio.
+            </p>
+            <div className="table-responsive">
+              <table className="table table-hover m-0">
+                <thead>
+                  <tr>
+                    <th>Dominio</th>
+                    <th>Estado</th>
+                    <th>Cliente</th>
+                    <th>Email</th>
+                    <th>Paquete</th>
+                    <th>Fecha</th>
+                    <th className="ta-e">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {registrationRequests.map((r) => (
+                    <tr key={r.id}>
+                      <td className="fw-600">{r.fqdn}</td>
+                      <td>
+                        <span
+                          className="badge fsz-xs"
+                          style={{
+                            backgroundColor: '#ffc107',
+                            color: '#fff',
+                          }}
+                        >
+                          Registro solicitado
+                        </span>
+                      </td>
+                      <td>{r.user?.fullName || 'N/A'}</td>
+                      <td>{r.user?.email || 'N/A'}</td>
+                      <td>
+                        {r.withHosting && r.registrationPackageID ? (
+                          <span className="badge fsz-xs" style={{ backgroundColor: '#17a2b8', color: '#fff' }}>
+                            {r.hostingPackage?.name || 'Con Hosting'}
+                          </span>
+                        ) : (
+                          <span className="badge fsz-xs" style={{ backgroundColor: '#6c757d', color: '#fff' }}>
+                            Solo Dominio
+                          </span>
+                        )}
+                      </td>
+                      <td>{dayjs(r.createdAt).format('DD/MM/YYYY')}</td>
+                      <td className="ta-e">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-success p-8 m-0"
+                          onClick={() => handleApproveTransfer(r.id)}
+                          disabled={approvingId === r.id}
+                        >
+                          {approvingId === r.id ? (
+                            <i className="ti-reload ti-spin" />
+                          ) : (
+                            <i className="ti-check" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger p-8 m-0"
+                          onClick={() => handleRejectTransfer(r.id)}
+                          disabled={rejectingId === r.id}
+                        >
+                          {rejectingId === r.id ? (
+                            <i className="ti-reload ti-spin" />
+                          ) : (
+                            <i className="ti-close" />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div className="bd bgc-white bdrs-3 p-25 mB-20" style={{ boxShadow: 'var(--shadow-card)' }}>
           <div className="d-f fxd-c ai-c ta-c">
             <h5 className="m-0 mB-10 c-grey-900 fw-600">
               Dominios a precio de costo, sin sorpresas
@@ -422,7 +762,7 @@ export default function DomainsPage() {
           </div>
         </div>
 
-        <div className="bd bgc-white bdrs-3 p-20" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <div className="bd bgc-white bdrs-3 p-20" style={{ boxShadow: 'var(--shadow-card)' }}>
           {loading ? (
             <div className="p-20 ta-c c-grey-700">Cargando...</div>
           ) : domains.length === 0 ? (
@@ -530,6 +870,11 @@ export default function DomainsPage() {
                         Pago
                         <SortIcon col="paymentStatus" />
                       </th>
+                      {hasTransferDomains && (
+                        <th className="c-grey-800" style={{ minWidth: 140 }}>
+                          Transferencia
+                        </th>
+                      )}
                       <th className="c-grey-800" style={{ minWidth: 100 }}>
                         Estado
                       </th>
@@ -588,9 +933,12 @@ export default function DomainsPage() {
                                 bottom: window.innerHeight - priceInfoRect.top + 6,
                                 zIndex: 9999,
                                 maxWidth: 280,
+                                backgroundColor: 'var(--c-bkg-card)',
+                                color: 'var(--c-text-base)',
+                                border: '1px solid var(--c-border)',
                               }}
                             >
-                              <div className="popover-body p-10 bdrs-3" style={{ backgroundColor: '#fff', border: '1px solid rgba(0,0,0,0.15)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                              <div className="popover-body p-10 bdrs-3" style={{ backgroundColor: 'var(--c-bkg-card)', color: 'var(--c-text-base)', border: '1px solid var(--c-border)', boxShadow: 'var(--shadow-md)' }}>
                                 Este dominio ya está incluido con uno de tus paquetes de hosting contratados
                               </div>
                             </div>,
@@ -618,6 +966,23 @@ export default function DomainsPage() {
                             {PAYMENT_LABELS[d.paymentStatus] ?? d.paymentStatus}
                           </span>
                         </td>
+                        {hasTransferDomains && (
+                          <td>
+                            {d.status === 'PENDING_PAYMENT' || d.status === 'PENDING_APPROVAL' || d.status === 'REGISTRATION_REQUESTED' ? (
+                              <span
+                                className="badge fsz-xs"
+                                style={{
+                                  backgroundColor: d.status === 'PENDING_APPROVAL' ? '#17a2b8' : d.status === 'REGISTRATION_REQUESTED' ? '#ffc107' : '#6c757d',
+                                  color: '#fff',
+                                }}
+                              >
+                                {d.status === 'PENDING_APPROVAL' ? 'Pendiente de aprobación' : d.status === 'REGISTRATION_REQUESTED' ? 'Registro solicitado' : 'Pendiente de pago'}
+                              </span>
+                            ) : (
+                              <span className="c-grey-500">—</span>
+                            )}
+                          </td>
+                        )}
                         <td>
                           <span className="d-f ai-c gap-2">
                             {pingStatus[d.id] === 'loading' ? (
@@ -751,7 +1116,7 @@ export default function DomainsPage() {
                 </div>
               </div>
               {showReactivationNotice && (
-                <p className="fsz-sm c-grey-600 mT-15 mB-0 p-12 bd bdrs-3" style={{ backgroundColor: '#fefce8', borderColor: '#fde047' }}>
+                <p className="fsz-sm c-grey-600 mT-15 mB-0 p-12 bd bdrs-3" style={{ backgroundColor: 'color-mix(in srgb, var(--c-warning) 15%, transparent)', borderColor: 'var(--c-warning)' }}>
                   <i className="ti-info-alt mR-8" />
                   Los dominios vencidos tienen un costo adicional de reactivación:{' '}
                   <strong>{reactivationPenalty}</strong>
@@ -789,7 +1154,7 @@ export default function DomainsPage() {
                   ¿Extender la vigencia de este dominio por un año adicional? El dominio{' '}
                   <strong>{renewModal.fqdn}</strong> de <strong>{renewModal.clientName}</strong> se mantendrá activo sin interrupciones.
                 </p>
-                <div className="p-15 bdrs-3 mB-0" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <div className="p-15 bdrs-3 mB-0" style={{ backgroundColor: 'var(--c-bkg-hover)', border: '1px solid var(--c-border)' }}>
                   <p className="m-0 fsz-sm c-grey-700 mB-5">
                     Fecha actual de vencimiento: <strong>{dayjs(renewModal.nextBillingDate).format('DD/MM/YYYY')}</strong>
                   </p>

@@ -4,7 +4,7 @@ import Link from 'next/link';
 export default function TerminosPage() {
   return (
     <AdminLayout>
-      <div className="container-fluid" style={{ background: '#fff', minHeight: '100%', padding: '24px' }}>
+      <div className="container-fluid" style={{ background: 'var(--c-bkg-body)', minHeight: '100%', padding: '24px' }}>
         <div className="row mB-20">
           <div className="col-12">
             <Link href="/hosting" className="c-primary fsz-sm td-n mB-10 d-ib fw-500">← Volver</Link>

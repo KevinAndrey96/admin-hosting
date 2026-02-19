@@ -19,22 +19,30 @@ echo "✓ Build OK"
 
 echo ""
 echo "Checking environment variables..."
-if [ ! -f ".env.local" ]; then
-  echo "⚠️  WARNING: .env.local not found"
+ENV_FILE=""
+if [ -f ".env.local" ]; then
+  ENV_FILE=".env.local"
+  echo "✓ .env.local found - will be included in the ZIP"
+elif [ -f ".env" ]; then
+  ENV_FILE=".env"
+  echo "✓ .env found - will be included in the ZIP"
+fi
+
+if [ -z "$ENV_FILE" ]; then
+  echo "⚠️  WARNING: No .env.local or .env found"
   echo "   The app will NOT work without DATABASE_URL and other variables."
   echo "   You can:"
   echo "   1. Create .env.local (copy from .env.local.example or cp .env .env.local)"
   echo "   2. Or set the variables manually in cPanel after deploy"
   echo ""
-  read -p "Continue without .env.local? (y/N): " -n 1 -r
+  read -p "Continue without env file? (y/N): " -n 1 -r
   echo ""
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Deploy cancelled. Create .env.local and run the script again."
+    echo "Deploy cancelled. Create .env or .env.local and run the script again."
     exit 1
   fi
   INCLUDE_ENV=false
 else
-  echo "✓ .env.local found - will be included in the ZIP"
   INCLUDE_ENV=true
 fi
 
@@ -53,7 +61,7 @@ echo "Creating $ZIP_NAME ..."
 if [ "$INCLUDE_ENV" = true ]; then
   zip -r "$ZIP_NAME" \
     .htaccess \
-    .env.local \
+    "$ENV_FILE" \
     package.json \
     start-server.js \
     next.config.js \
@@ -88,14 +96,14 @@ fi
 echo ""
 echo "   - .htaccess"
 if [ "$INCLUDE_ENV" = true ]; then
-  echo "   - .env.local (environment variables)"
+  echo "   - $ENV_FILE (environment variables)"
 fi
 echo "   - package.json, start-server.js, next.config.js, tsconfig.json"
 echo "   - .next/standalone (includes static + public)"
 echo "   - app/, lib/, prisma/, types/, public/"
 echo ""
 if [ "$INCLUDE_ENV" = true ]; then
-  echo "✅ ZIP includes .env.local - App will work automatically"
+  echo "✅ ZIP includes $ENV_FILE - App will work automatically"
   echo ""
 fi
 echo "📤 Next step: Upload $ZIP_NAME to cPanel in the admin folder and extract it."

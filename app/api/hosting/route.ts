@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { whmListAccounts } from '@/lib/whm-client';
 
 function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
@@ -11,7 +12,7 @@ function requireAuth(session: { isLoggedIn: boolean; userId?: string }) {
   return session.isLoggedIn && session.userId;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const session = await getSession(cookieStore);
@@ -34,28 +35,39 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    const list = hosting.map((h) => ({
-      id: h.id,
-      userID: h.userID,
-      clientName: h.user.fullName,
-      clientEmail: h.user.email,
-      packageID: h.packageID,
-      packageName: h.hostingPackage.name,
-      packageColorHex: h.hostingPackage.colorHex,
-      diskSpaceQuotaMb: h.hostingPackage.diskSpaceQuotaMb,
-      salePrice: Number(h.hostingPackage.salePrice),
-      currency: h.hostingPackage.currency,
-      domainIDs: h.domains.map((hd) => hd.domain.id),
-      domainFqdns: h.domains.map((hd) => hd.domain.fqdn),
-      username: h.username,
-      billingCycle: h.billingCycle,
-      nextBillingDate: h.nextBillingDate,
-      paymentStatus: h.paymentStatus,
-      serviceStatus: h.serviceStatus,
-      createdAt: h.createdAt,
-    }));
+    const whmResult = await whmListAccounts();
+    const whmByDomain = whmResult.ok && whmResult.accounts ? whmResult.accounts : {};
 
-    return NextResponse.json(list);
+    const list = hosting.map((h) => {
+      const domains = h.domains.map((hd) => hd.domain.fqdn.toLowerCase().trim());
+      const matchedDomain = domains.find((d) => d in whmByDomain);
+      const diskUsed = matchedDomain ? whmByDomain[matchedDomain]?.diskused : undefined;
+      return {
+        id: h.id,
+        userID: h.userID,
+        clientName: h.user.fullName,
+        clientEmail: h.user.email,
+        packageID: h.packageID,
+        packageName: h.hostingPackage.name,
+        packageColorHex: h.hostingPackage.colorHex,
+        diskSpaceQuotaMb: h.hostingPackage.diskSpaceQuotaMb,
+        diskUsed,
+        salePrice: Number(h.hostingPackage.salePrice),
+        currency: h.hostingPackage.currency,
+        domainIDs: h.domains.map((hd) => hd.domain.id),
+        domainFqdns: h.domains.map((hd) => hd.domain.fqdn),
+        username: h.username,
+        billingCycle: h.billingCycle,
+        nextBillingDate: h.nextBillingDate,
+        paymentStatus: h.paymentStatus,
+        serviceStatus: String(h.serviceStatus),
+        createdAt: h.createdAt,
+      };
+    });
+
+    const res = NextResponse.json(list);
+    res.headers.set('Cache-Control', 'no-store, max-age=0');
+    return res;
   } catch (error) {
     console.error('Hosting GET error:', error);
     return NextResponse.json(

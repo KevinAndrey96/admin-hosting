@@ -93,7 +93,7 @@ export default function Topbar() {
                   aria-label="Toggle dark mode"
                   checked={theme === 'dark'}
                   onChange={toggleTheme}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, cursor: 'pointer' }}
                 />
                 <label className="form-check-label ms-2 text-nowrap c-grey-700" htmlFor="theme-toggle" style={{ fontSize: '12px', marginLeft: '8px' }}>
                   <span className="theme-label">Dark</span>

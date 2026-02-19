@@ -40,6 +40,7 @@ async function getDomainById(id: string) {
     renewalDate: domain.renewalDate,
     nextBillingDate: domain.nextBillingDate,
     paymentStatus: domain.paymentStatus,
+    status: domain.status,
     transferLock: domain.transferLock,
     healthStatus: domain.healthStatus,
     nameserver1: domain.nameserver1,

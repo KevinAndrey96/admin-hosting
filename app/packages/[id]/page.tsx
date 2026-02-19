@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import AdminLayout from '../../../components/AdminLayout';
-import { useSession } from '../../../hooks/useSession';
+import AdminLayout from '../../components/AdminLayout';
+import { useSession } from '../../hooks/useSession';
 import dayjs from 'dayjs';
 
 type PackageData = {
@@ -138,7 +138,7 @@ export default function PackageDetailPage() {
 
   return (
     <AdminLayout>
-      <div className="container-fluid" style={{ background: '#fff', minHeight: '100%', padding: '24px' }}>
+      <div className="container-fluid" style={{ background: 'var(--c-bkg-body)', minHeight: '100%', padding: '24px' }}>
         <div className="row mB-20">
           <div className="col-12 d-f jc-sb ai-c fxw-w gap-3">
             <div>

@@ -5,9 +5,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
+import { useTheme } from '@/app/hooks/useTheme';
 
 export default function SignInPage() {
   const { logoUrl, companyName } = useSettings();
+  const { theme, toggleTheme, mounted } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -36,6 +38,7 @@ export default function SignInPage() {
       const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
       const res = await fetch(`${basePath}/api/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim(),
@@ -70,8 +73,41 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="d-f ai-c jc-c" style={{ minHeight: '100vh', background: 'var(--c-bkg-body)' }}>
-      <div className="bd bgc-white p-40 bdrs-10" style={{ width: '100%', maxWidth: 400, boxShadow: 'var(--shadow-lg)' }}>
+    <div className="d-f ai-c jc-c" style={{ minHeight: '100vh', background: 'var(--c-bkg-body)', position: 'relative' }}>
+      {mounted && (
+        <div
+          className="form-check form-switch"
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <label className="form-check-label fsz-sm c-grey-700" htmlFor="signin-theme-toggle">
+            <i className="ti-sun" style={{ marginRight: 4 }} />
+            Light
+          </label>
+          <input
+            type="checkbox"
+            className="form-check-input"
+            id="signin-theme-toggle"
+            checked={theme === 'dark'}
+            onChange={toggleTheme}
+            style={{ cursor: 'pointer' }}
+          />
+          <label className="form-check-label fsz-sm c-grey-700" htmlFor="signin-theme-toggle">
+            Dark
+            <i className="ti-moon" style={{ marginLeft: 4 }} />
+          </label>
+        </div>
+      )}
+      <div
+        className="bd bgc-white p-40 bdrs-10 signin-form"
+        style={{ width: '100%', maxWidth: 400, boxShadow: 'var(--shadow-lg)' }}
+      >
         <div className="ta-c mB-30">
           <Link href="/" className="td-n">
             <Image
@@ -106,6 +142,7 @@ export default function SignInPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
+              style={{ color: 'var(--c-text-base)', backgroundColor: 'var(--c-bkg-card)' }}
             />
           </div>
           <div className="mb-3">
@@ -120,6 +157,7 @@ export default function SignInPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
+              style={{ color: 'var(--c-text-base)', backgroundColor: 'var(--c-bkg-card)' }}
             />
           </div>
           <div className="mb-3 d-f jc-sb ai-c">

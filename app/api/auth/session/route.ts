@@ -21,6 +21,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Session error:', error);
+    if (!process.env.SESSION_SECRET) {
+      console.error('SESSION_SECRET is not set - session cannot be decrypted');
+    }
     return NextResponse.json({ user: null }, { status: 401 });
   }
 }

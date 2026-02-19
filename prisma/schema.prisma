@@ -28,22 +28,25 @@ enum UserStatus {
 }
 
 model User {
-  id          String     @id @default(cuid())
-  fullName    String     @map("full_name")
-  email       String     @unique
-  phone       String?
-  companyName String?    @map("company_name")
-  address     String?
-  zipCode     String?    @map("zip_code")
-  password    String
+  id            String     @id @default(cuid())
+  fullName      String     @map("full_name")
+  email         String     @unique
+  phone         String?
+  companyName   String?    @map("company_name")
+  address       String?
+  city          String?
+  stateProvince String?    @map("state_province")
+  country       String?
+  zipCode       String?    @map("zip_code")
+  password      String
   role        UserRole   @default(CLIENT)
   status      UserStatus @default(ENABLED)
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
-  passwordResetTokens PasswordResetToken[]
-  domains            Domain[]
-  hosting             HostingService[]
+  passwordResetTokens       PasswordResetToken[]
+  domains                   Domain[]
+  hosting                   HostingService[]
 
   @@map("users")
 }
@@ -102,6 +105,14 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum DomainStatus {
+  PENDING_PAYMENT
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+  REGISTRATION_REQUESTED
+}
+
 enum HostingServiceStatus {
   ENABLED
   SUSPENDED
@@ -119,38 +130,44 @@ enum BillingCycle {
 }
 
 model Domain {
-  id             String              @id @default(cuid())
-  userID         String              @map("user_id")
-  registrarName  String              @map("registrar_name")
-  fqdn           String              // e.g. example.com
-  salePrice      Decimal              @map("sale_price") @db.Decimal(10, 2)
-  currency       String              @default("COP")
-  billingCycle   BillingCycle        @default(ANNUAL) @map("billing_cycle")
-  renewalDate    DateTime            @map("renewal_date")
-  nextBillingDate DateTime           @map("next_billing_date")
-  paymentStatus  PaymentStatus       @default(PENDING) @map("payment_status")
-  transferLock   Boolean             @default(true) @map("transfer_lock")
-  healthStatus   HealthStatus        @default(UNKNOWN) @map("health_status")
-  nameserver1    String?             @map("nameserver_1")
-  nameserver2    String?             @map("nameserver_2")
-  registrantName  String?            @map("registrant_name")
-  registrantOrg   String?            @map("registrant_org")
-  registrantEmail String?            @map("registrant_email")
-  registrantPhone String?            @map("registrant_phone")
-  registrantAddress String?          @map("registrant_address") @db.Text
-  registrantCity  String?            @map("registrant_city")
-  registrantState String?            @map("registrant_state")
-  registrantCountry String?          @map("registrant_country")
-  registrantPostalCode String?       @map("registrant_postal_code")
-  privacyEnabled  Boolean           @default(false) @map("privacy_enabled")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
+  id                 String                 @id @default(cuid())
+  userID             String                 @map("user_id")
+  registrarName      String                 @map("registrar_name")
+  fqdn               String                 // e.g. example.com
+  salePrice          Decimal                @map("sale_price") @db.Decimal(10, 2)
+  currency           String                 @default("COP")
+  billingCycle       BillingCycle           @default(ANNUAL) @map("billing_cycle")
+  renewalDate        DateTime               @map("renewal_date")
+  nextBillingDate    DateTime               @map("next_billing_date")
+  paymentStatus      PaymentStatus          @default(PENDING) @map("payment_status")
+  transferLock       Boolean                @default(true) @map("transfer_lock")
+  healthStatus       HealthStatus           @default(UNKNOWN) @map("health_status")
+  nameserver1        String?                @map("nameserver_1")
+  nameserver2        String?                @map("nameserver_2")
+  registrantName     String?                @map("registrant_name")
+  registrantOrg      String?                @map("registrant_org")
+  registrantEmail    String?                @map("registrant_email")
+  registrantPhone    String?                @map("registrant_phone")
+  registrantAddress  String?                @map("registrant_address") @db.Text
+  registrantCity     String?                @map("registrant_city")
+  registrantState    String?                @map("registrant_state")
+  registrantCountry  String?                @map("registrant_country")
+  registrantPostalCode String?              @map("registrant_postal_code")
+  privacyEnabled     Boolean                @default(false) @map("privacy_enabled")
+  status             DomainStatus           @default(ACTIVE) @map("status")
+  authCode           String?                @map("auth_code") @db.Text
+  paymentProofPath   String?                @map("payment_proof_path")
+  withHosting        Boolean                @default(false) @map("with_hosting")
+  registrationPackageID String?              @map("registration_package_id")
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
 
-  user        User              @relation(fields: [userID], references: [id], onDelete: Cascade)
-  hostingDomains HostingDomain[]
+  user             User              @relation(fields: [userID], references: [id], onDelete: Cascade)
+  hostingDomains   HostingDomain[]
 
   @@index([userID])
   @@index([nextBillingDate, paymentStatus])
+  @@index([status])
   @@map("domains")
 }
 

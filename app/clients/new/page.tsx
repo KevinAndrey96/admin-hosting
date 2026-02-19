@@ -221,7 +221,7 @@ export default function NewClientPage() {
                   </button>
                 </div>
                 <div className="form-text mT-5">
-                  Si se deja vacío, el cliente puede usar "¿Olvidaste tu contraseña?" para definirla.
+                  Si se deja vacío, el cliente puede usar &quot;¿Olvidaste tu contraseña?&quot; para definirla.
                 </div>
               </div>
 

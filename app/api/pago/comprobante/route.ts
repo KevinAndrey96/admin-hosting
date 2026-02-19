@@ -12,6 +12,8 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'ap
 const TIPO_LABELS: Record<string, string> = {
   'contratar-dominio': 'Contratar dominio',
   'renovar-dominio': 'Renovar dominio',
+  'transferir-dominio': 'Transferir dominio',
+  'registrar-dominio': 'Registrar dominio',
   'contratar-hosting': 'Contratar hosting',
   'renovar-hosting': 'Renovar hosting',
 };
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest) {
     const itemLabel = (formData.get('itemLabel') as string) || '';
     const hostingId = (formData.get('hostingId') as string) || '';
     const packageId = (formData.get('packageId') as string) || '';
+    const domainIdTransfer = (formData.get('domainId') as string)?.trim() || '';
 
     if (!file || !file.size) {
       return NextResponse.json({ error: 'No se recibió ningún archivo' }, { status: 400 });
@@ -66,7 +69,54 @@ export async function POST(request: NextRequest) {
     const uploadDir = path.join(process.cwd(), 'uploads', 'comprobantes');
     await mkdir(uploadDir, { recursive: true });
     const filepath = path.join(uploadDir, filename);
-    await writeFile(filepath, buffer);
+
+    // Handle domain registration requests
+    if (tipo === 'registrar-dominio' && domainIdTransfer) {
+      const domain = await prisma.domain.findFirst({
+        where: {
+          id: domainIdTransfer,
+          userID: session.userId!,
+          status: 'REGISTRATION_REQUESTED',
+        },
+      });
+      if (!domain) {
+        return NextResponse.json(
+          { error: 'Solicitud de registro no encontrada o ya procesada' },
+          { status: 404 }
+        );
+      }
+      await prisma.domain.update({
+        where: { id: domainIdTransfer },
+        data: {
+          paymentProofPath: filename,
+          status: 'PENDING_APPROVAL',
+        },
+      });
+    }
+
+    // For transfer requests: update status and save proof path
+    if (tipo === 'transferir-dominio' && domainIdTransfer) {
+      const domain = await prisma.domain.findFirst({
+        where: {
+          id: domainIdTransfer,
+          userID: session.userId!,
+          status: 'PENDING_PAYMENT',
+        },
+      });
+      if (!domain) {
+        return NextResponse.json(
+          { error: 'Solicitud de transferencia no encontrada o ya procesada' },
+          { status: 404 }
+        );
+      }
+      await prisma.domain.update({
+        where: { id: domainIdTransfer },
+        data: {
+          paymentProofPath: filename,
+          status: 'PENDING_APPROVAL',
+        },
+      });
+    }
 
     const client = await prisma.user.findUnique({
       where: { id: session.userId },
@@ -122,7 +172,9 @@ export async function POST(request: NextRequest) {
             <tr><td style="padding:8px 0;"><strong>Método de pago:</strong></td><td style="padding:8px 0;">${metodoLabel}</td></tr>
           </table>
           <p style="margin:16px 0 0;font-size:14px;color:#6c757d;">
-            El comprobante está adjunto. Por favor, verifica el pago y procede manualmente a la renovación o activación del servicio.
+            ${tipo === 'transferir-dominio'
+              ? 'El comprobante está adjunto. Esta es una solicitud de transferencia de dominio. Revisa la información en la sección Dominios y aprueba o rechaza la transferencia para ejecutarla en Spaceship.'
+              : 'El comprobante está adjunto. Por favor, verifica el pago y procede manualmente a la renovación o activación del servicio.'}
           </p>
         </td></tr>
       </table>

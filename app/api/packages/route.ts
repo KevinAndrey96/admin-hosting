@@ -47,7 +47,7 @@ export async function GET() {
 
     const packages = await prisma.hostingPackage.findMany({
       include: { _count: { select: { hosting: true } } },
-      orderBy: { name: 'asc' },
+      orderBy: { salePrice: 'asc' },
     });
 
     return NextResponse.json(packages.map(toPackageResponse));

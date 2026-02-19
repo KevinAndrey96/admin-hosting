@@ -17,6 +17,52 @@ body {
   background: var(--c-bkg-sidebar);
 }
 
+// Sidebar item - subtle highlight for active and hover (no bright white/lavender)
+[data-theme="dark"] .sidebar .sidebar-menu li.actived > a,
+[data-theme="dark"] .sidebar .sidebar-menu li.dropdown.has-active-child > a,
+[data-theme="light"] .sidebar .sidebar-menu li.actived > a,
+[data-theme="light"] .sidebar .sidebar-menu li.dropdown.has-active-child > a,
+:root .sidebar .sidebar-menu li.actived > a,
+:root .sidebar .sidebar-menu li.dropdown.has-active-child > a {
+  background-color: var(--c-bkg-hover) !important;
+  border-left: 3px solid var(--c-primary) !important;
+  margin-left: -3px;
+  color: var(--c-text-base) !important;
+
+  .icon-holder {
+    color: var(--c-primary) !important;
+  }
+}
+
+// Sidebar hover - same subtle style
+[data-theme="dark"] .sidebar .sidebar-menu li a:hover,
+[data-theme="dark"] .sidebar .sidebar-menu li a:focus,
+[data-theme="dark"] .sidebar .sidebar-menu li.dropdown.open > a,
+[data-theme="light"] .sidebar .sidebar-menu li a:hover,
+[data-theme="light"] .sidebar .sidebar-menu li a:focus,
+[data-theme="light"] .sidebar .sidebar-menu li.dropdown.open > a,
+:root .sidebar .sidebar-menu li a:hover,
+:root .sidebar .sidebar-menu li a:focus,
+:root .sidebar .sidebar-menu li.dropdown.open > a {
+  background-color: var(--c-bkg-hover) !important;
+  color: var(--c-text-base) !important;
+
+  .icon-holder {
+    color: var(--c-icon-hover) !important;
+  }
+}
+
+// Dropdown sub-items hover
+[data-theme="dark"] .sidebar .sidebar-menu li.dropdown ul.dropdown-menu > li > a:hover,
+[data-theme="dark"] .sidebar .sidebar-menu li.dropdown ul.dropdown-menu > li > a:focus,
+[data-theme="light"] .sidebar .sidebar-menu li.dropdown ul.dropdown-menu > li > a:hover,
+[data-theme="light"] .sidebar .sidebar-menu li.dropdown ul.dropdown-menu > li > a:focus,
+:root .sidebar .sidebar-menu li.dropdown ul.dropdown-menu > li > a:hover,
+:root .sidebar .sidebar-menu li.dropdown ul.dropdown-menu > li > a:focus {
+  background-color: var(--c-bkg-hover) !important;
+  color: var(--c-text-base) !important;
+}
+
 .bgc-white {
   background: var(--c-bkg-card) !important;
 }
@@ -47,7 +93,8 @@ body {
   }
 
   .theme-toggle {
-    display: flex;
+    display: flex !important;
+    visibility: visible !important;
     align-items: center;
     height: 65px;
     padding: 0 15px;
@@ -182,7 +229,7 @@ input::placeholder { color: var(--c-text-muted); }
 [data-theme="dark"] .bgcH-grey-100:hover { background: color-mix(in srgb, var(--c-bkg-card) 85%, var(--c-border)) !important; }
 .sidebar, .sidebar-menu { border-right: 1px solid var(--c-border); }
 [data-theme="dark"] .c-grey-900, [data-theme="dark"] .c-grey-800 { color: var(--c-text-base) !important; }
-[data-theme="dark"] .c-grey-700, [data-theme="dark"] .c-grey-600 { color: var(--c-text-muted) !important; }
+[data-theme="dark"] .c-grey-700, [data-theme="dark"] .c-grey-600, [data-theme="dark"] .c-grey-500 { color: var(--c-text-muted) !important; }
 [data-theme="dark"] .text-dark { color: var(--c-text-base) !important; }
 h1, h2, h3, h4, h5, h6 { color: var(--c-text-base); }
 .table-responsive { border: 1px solid var(--c-border); border-radius: 3px; }

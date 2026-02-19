@@ -20,6 +20,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (pathname?.startsWith('/tables')) setOpenDropdown('tables');
     else if (pathname?.startsWith('/maps')) setOpenDropdown('maps');
+    else if (pathname?.startsWith('/domains')) setOpenDropdown('domains');
     else if (pathname && ['/blank', '/error-404', '/error-500', '/signin', '/signup'].includes(pathname)) setOpenDropdown('pages');
     else setOpenDropdown(null);
   }, [pathname]);
@@ -76,13 +77,27 @@ export default function Sidebar() {
               <span className="title">Inicio</span>
             </Link>
           </li>
-          <li className={`nav-item ${pathname?.startsWith('/domains') ? 'actived' : ''}`}>
-            <Link href="/domains" className="sidebar-link">
+          <li className={`nav-item dropdown ${openDropdown === 'domains' ? 'open' : ''} ${pathname?.startsWith('/domains') ? 'actived' : ''}`}>
+            <a className="dropdown-toggle sidebar-link" href="#" onClick={toggleDropdown('domains')} role="button">
               <span className="icon-holder">
                 <i className="c-cyan-500 ti-world" />
               </span>
               <span className="title">Dominios</span>
-            </Link>
+              <span className="arrow">
+                <i className="ti-angle-right" />
+              </span>
+            </a>
+            <ul className="dropdown-menu">
+              <li>
+                <Link href="/domains" className="sidebar-dropdown-link">Lista</Link>
+              </li>
+              <li>
+                <Link href="/domains/register" className="sidebar-dropdown-link">Registrar nuevo</Link>
+              </li>
+              <li>
+                <Link href="/domains/transfer-in" className="sidebar-dropdown-link">Transferir aquí</Link>
+              </li>
+            </ul>
           </li>
           <li className={`nav-item ${pathname?.startsWith('/hosting') ? 'actived' : ''}`}>
             <Link href="/hosting" className="sidebar-link">

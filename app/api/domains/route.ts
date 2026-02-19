@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { randomBytes } from 'crypto';
+import { DomainStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { registerDomain } from '@/lib/spaceship';
+import type { WhoisContact } from '@/lib/spaceship';
+import {
+  whmCreateAccount,
+  deriveWhmUsernameFromDomain,
+} from '@/lib/whm-client';
 
 function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
@@ -20,9 +28,14 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
+    const allStatuses = {
+      status: {
+        in: [DomainStatus.ACTIVE, DomainStatus.REJECTED, DomainStatus.PENDING_PAYMENT, DomainStatus.PENDING_APPROVAL, DomainStatus.REGISTRATION_REQUESTED],
+      },
+    };
     const where = session.role === 'ADMIN'
-      ? {}
-      : { userID: session.userId };
+      ? allStatuses
+      : { userID: session.userId, ...allStatuses };
 
     const domains = await prisma.domain.findMany({
       where,
@@ -32,23 +45,27 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    const list = domains.map((d) => ({
-      id: d.id,
-      userID: d.userID,
-      clientName: d.user.fullName,
-      clientEmail: d.user.email,
-      registrarName: d.registrarName,
-      fqdn: d.fqdn,
-      salePrice: Number(d.salePrice),
-      currency: d.currency,
-      billingCycle: d.billingCycle,
-      renewalDate: d.renewalDate,
-      nextBillingDate: d.nextBillingDate,
-      paymentStatus: d.paymentStatus,
-      transferLock: d.transferLock,
-      healthStatus: d.healthStatus,
-      createdAt: d.createdAt,
-    }));
+    const list = domains.map((d) => {
+      const domain = d as typeof d & { user: { fullName: string; email: string } };
+      return {
+        id: domain.id,
+        userID: domain.userID,
+        clientName: domain.user.fullName,
+        clientEmail: domain.user.email,
+        registrarName: domain.registrarName,
+        fqdn: domain.fqdn,
+        salePrice: Number(domain.salePrice),
+        currency: domain.currency,
+        billingCycle: domain.billingCycle,
+        renewalDate: domain.renewalDate,
+        nextBillingDate: domain.nextBillingDate,
+        paymentStatus: domain.paymentStatus,
+        status: domain.status,
+        transferLock: domain.transferLock,
+        healthStatus: domain.healthStatus,
+        createdAt: domain.createdAt,
+      };
+    });
 
     return NextResponse.json(list);
   } catch (error) {
@@ -79,6 +96,9 @@ export async function POST(request: NextRequest) {
       renewalDate,
       paymentStatus,
       transferLock,
+      registerInSpaceship,
+      createHostingWithPackage,
+      hostingPackageID,
     } = body;
 
     if (!userID?.trim()) {
@@ -88,7 +108,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const registrarNameNorm = registrarName?.trim();
+    const wantSpaceship = Boolean(registerInSpaceship);
+    const registrarNameNorm = wantSpaceship ? 'Spaceship' : (registrarName?.trim() || '');
     if (!registrarNameNorm) {
       return NextResponse.json(
         { error: 'El registrador es requerido' },
@@ -112,7 +133,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const renewal = renewalDate ? new Date(renewalDate) : new Date();
+    let renewal = renewalDate ? new Date(renewalDate) : new Date();
 
     const user = await prisma.user.findUnique({
       where: { id: userID },
@@ -134,6 +155,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (wantSpaceship) {
+      const whois: WhoisContact = {
+        registrantName: user.fullName?.trim() || 'N/A',
+        registrantOrg: user.companyName?.trim() || null,
+        registrantEmail: user.email?.trim() || '',
+        registrantPhone: user.phone?.trim() || null,
+        registrantAddress: user.address?.trim() || null,
+        registrantCity: user.city?.trim() || null,
+        registrantState: user.stateProvince?.trim() || null,
+        registrantCountry: user.country?.trim() || 'CO',
+        registrantPostalCode: user.zipCode?.trim() || null,
+      };
+      const regResult = await registerDomain(fqdnNorm, whois, {
+        years: 1,
+        privacyEnabled: false,
+        autoRenew: false,
+      });
+      if (!regResult.ok) {
+        return NextResponse.json(
+          { error: regResult.error || 'Error al registrar el dominio en Spaceship.' },
+          { status: 502 }
+        );
+      }
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      renewal = oneYearFromNow;
+    }
+
     const domain = await prisma.domain.create({
       data: {
         userID,
@@ -153,6 +202,74 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const wantHosting = Boolean(createHostingWithPackage) && Boolean(hostingPackageID?.trim());
+    let hostingMessage: string | undefined;
+
+    if (wantHosting) {
+      const pkg = await prisma.hostingPackage.findUnique({
+        where: { id: hostingPackageID.trim() },
+      });
+      if (!pkg) {
+        return NextResponse.json(
+          {
+            id: domain.id,
+            userID: domain.userID,
+            clientName: domain.user.fullName,
+            registrarName: domain.registrarName,
+            fqdn: domain.fqdn,
+            salePrice: Number(domain.salePrice),
+            currency: domain.currency,
+            paymentStatus: domain.paymentStatus,
+            nextBillingDate: domain.nextBillingDate,
+            message: 'Dominio creado correctamente. El paquete de hosting no existe; crea el servidor manualmente si lo necesitas.',
+          },
+          { status: 201 }
+        );
+      }
+
+      const whmUsername = deriveWhmUsernameFromDomain(fqdnNorm);
+      const whmPassword = randomBytes(14).toString('base64').replace(/[+/=]/g, (c) =>
+        c === '+' ? 'A' : c === '/' ? 'B' : '0'
+      ).slice(0, 20);
+
+      const whmPlan = pkg.id;
+      const whmResult = await whmCreateAccount({
+        username: whmUsername,
+        domain: fqdnNorm,
+        password: whmPassword,
+        plan: whmPlan,
+        contactemail: user.email?.trim() || undefined,
+      });
+
+      if (!whmResult.ok) {
+        return NextResponse.json(
+          {
+            error: `Dominio creado, pero no se pudo crear la cuenta en WHM: ${whmResult.error}. Crea el hosting manualmente desde Hosting.`,
+            domainId: domain.id,
+          },
+          { status: 502 }
+        );
+      }
+
+      const nextBillingHosting = new Date();
+      nextBillingHosting.setFullYear(nextBillingHosting.getFullYear() + 1);
+
+      await prisma.hostingService.create({
+        data: {
+          userID,
+          packageID: pkg.id,
+          username: whmResult.username,
+          nextBillingDate: nextBillingHosting,
+          paymentStatus: 'PENDING',
+          serviceStatus: 'ENABLED',
+          domains: {
+            create: [{ domainID: domain.id }],
+          },
+        },
+      });
+      hostingMessage = ' Cuenta de hosting creada en WHM.';
+    }
+
     return NextResponse.json(
       {
         id: domain.id,
@@ -164,7 +281,7 @@ export async function POST(request: NextRequest) {
         currency: domain.currency,
         paymentStatus: domain.paymentStatus,
         nextBillingDate: domain.nextBillingDate,
-        message: 'Dominio creado correctamente.',
+        message: 'Dominio creado correctamente.' + (hostingMessage ?? ''),
       },
       { status: 201 }
     );
