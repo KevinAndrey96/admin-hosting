@@ -18,11 +18,12 @@ export function getDaysUntilExpiration(expDate: Date): number {
 export type ReminderType = 'standard' | 'urgent_5' | 'expired_3_1' | 'expired' | 'manual';
 
 export function getReminderType(daysLeft: number): ReminderType | null {
-  if (daysLeft === 30 || daysLeft === 15 || daysLeft === 7) return 'standard';
-  if (daysLeft === 5) return 'urgent_5';
-  if (daysLeft === 3 || daysLeft === 1) return 'expired_3_1';
-  if (daysLeft <= 0) return 'expired';
-  return null;
+  // Envíos los días 1, 10 y 20 de cada mes para servicios en ventana de vencimiento
+  if (daysLeft > 30 || daysLeft < -30) return null;
+  if (daysLeft > 10) return 'standard';      // 11 a 30 días restantes
+  if (daysLeft > 3) return 'urgent_5';       // 4 a 10 días restantes (urgente)
+  if (daysLeft >= 1) return 'expired_3_1';   // 1 a 3 días restantes (inminente / mañana)
+  return 'expired';                          // <= 0 días (expirado)
 }
 
 function buildTips(reactivationPenalty?: string, serviceLabel: 'dominio' | 'servicio' = 'dominio'): string {
@@ -73,13 +74,13 @@ export function buildDomainReminderEmail(params: {
     title = `Recordatorio: tu dominio vence en ${daysLeft} días`;
     body = `Tu dominio <strong>${fqdn}</strong> vence el <strong>${formatDate(expDate)}</strong> (en ${daysLeft} días). Te recomendamos renovarlo con anticipación.`;
   } else if (type === 'urgent_5') {
-    title = '¡Ya está por expirar! Solo quedan 5 días';
-    body = `Tu dominio <strong>${fqdn}</strong> vence el <strong>${formatDate(expDate)}</strong>. Ya está próximo a expirar. Renueva ahora para evitar costos de reactivación y pérdida de información.`;
+    title = `¡Ya está por expirar! Solo quedan ${daysLeft} días`;
+    body = `Tu dominio <strong>${fqdn}</strong> vence el <strong>${formatDate(expDate)}</strong> (en ${daysLeft} días). Ya está próximo a expirar. Renueva ahora para evitar costos de reactivación y pérdida de información.`;
   } else if (type === 'expired_3_1') {
-    title = daysLeft === 1 ? '¡Tu dominio expira mañana!' : '¡Solo quedan 3 días! Tu dominio está por expirar';
+    title = daysLeft === 1 ? '¡Tu dominio expira mañana!' : `¡Solo quedan ${daysLeft} días! Tu dominio está por expirar`;
     body = daysLeft === 1
       ? `Tu dominio <strong>${fqdn}</strong> expira mañana (<strong>${formatDate(expDate)}</strong>). Renueva ahora para evitar que expire.`
-      : `Tu dominio <strong>${fqdn}</strong> vence el <strong>${formatDate(expDate)}</strong>. Está a punto de expirar.`;
+      : `Tu dominio <strong>${fqdn}</strong> vence el <strong>${formatDate(expDate)}</strong> (en ${daysLeft} días). Está a punto de expirar.`;
   } else {
     title = '¡Tu dominio ha expirado!';
     body = `Tu dominio <strong>${fqdn}</strong> venció el <strong>${formatDate(expDate)}</strong>. Renueva cuanto antes para recuperar tu servicio y evitar costos adicionales.`;
@@ -151,13 +152,13 @@ export function buildHostingReminderEmail(params: {
     title = `Recordatorio: tu hosting vence en ${daysLeft} días`;
     body = `Tu plan <strong>${packageName}</strong> (usuario: ${username}) vence el <strong>${formatDate(expDate)}</strong> (en ${daysLeft} días). Te recomendamos renovarlo con anticipación.`;
   } else if (type === 'urgent_5') {
-    title = '¡Ya está por expirar! Solo quedan 5 días';
-    body = `Tu plan <strong>${packageName}</strong> (usuario: ${username}) vence el <strong>${formatDate(expDate)}</strong>. Ya está próximo a expirar. Renueva ahora para evitar costos de reactivación y pérdida de información.`;
+    title = `¡Ya está por expirar! Solo quedan ${daysLeft} días`;
+    body = `Tu plan <strong>${packageName}</strong> (usuario: ${username}) vence el <strong>${formatDate(expDate)}</strong> (en ${daysLeft} días). Ya está próximo a expirar. Renueva ahora para evitar costos de reactivación y pérdida de información.`;
   } else if (type === 'expired_3_1') {
-    title = daysLeft === 1 ? '¡Tu hosting expira mañana!' : '¡Solo quedan 3 días! Tu hosting está por expirar';
+    title = daysLeft === 1 ? '¡Tu hosting expira mañana!' : `¡Solo quedan ${daysLeft} días! Tu hosting está por expirar`;
     body = daysLeft === 1
       ? `Tu plan <strong>${packageName}</strong> (usuario: ${username}) expira mañana (<strong>${formatDate(expDate)}</strong>). Renueva ahora para evitar que expire.`
-      : `Tu plan <strong>${packageName}</strong> (usuario: ${username}) vence el <strong>${formatDate(expDate)}</strong>. Está a punto de expirar.`;
+      : `Tu plan <strong>${packageName}</strong> (usuario: ${username}) vence el <strong>${formatDate(expDate)}</strong> (en ${daysLeft} días). Está a punto de expirar.`;
   } else {
     title = '¡Tu hosting ha expirado!';
     body = `Tu plan <strong>${packageName}</strong> (usuario: ${username}) venció el <strong>${formatDate(expDate)}</strong>. Renueva cuanto antes para recuperar tu servicio y evitar costos adicionales.`;
@@ -222,8 +223,8 @@ export function buildAdminReminderEmail(params: {
   const isUrgent = kind === 'suspend_user';
   const title =
     kind === 'remind_user'
-      ? `Servicios que vencen en 7 días: recuerda al usuario renovar`
-      : `¡Urgente! Servicios que vencen mañana: suspender servicio`;
+      ? `Servicios próximos a vencer (≤10 días): recuerda al usuario renovar`
+      : `¡Urgente! Servicios por vencer o vencidos (≤1 día): suspender servicio si no ha renovado`;
 
   const headerBg = isUrgent ? '#dc3545' : '#6366f1';
   const headerColor = '#fff';
@@ -252,10 +253,10 @@ export function buildAdminReminderEmail(params: {
 
   const actionText =
     kind === 'remind_user'
-      ? 'Recuerda a cada usuario renovar su servicio.'
+      ? 'Recuerda a cada usuario renovar su servicio antes de la fecha de corte.'
       : items.length === 1
-        ? 'Suspende el servicio a este usuario si no ha renovado.'
-        : 'Suspende el servicio a estos usuarios si no han renovado.';
+        ? 'Suspende el servicio a este usuario si no ha renovado su pago.'
+        : 'Suspende el servicio a estos usuarios si no han renovado su pago.';
 
   const html = `
 <!DOCTYPE html>

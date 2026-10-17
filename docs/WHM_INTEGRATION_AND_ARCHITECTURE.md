@@ -90,6 +90,9 @@ Los paquetes del panel administrativo (`hosting_packages`) tienen correspondenci
 | `shape_gold` | `shape_gold` | 2.000 MB | 200 GB | Ilimitadas | 1 | 60 / hora |
 | `shape_platinum` | `shape_platinum` | 5.000 MB | 500 GB | Ilimitadas | 2 | 60 / hora |
 | `shape_diamond` | `shape_diamond` | 10.000 MB | 1 TB | Ilimitadas | Ilimitados | 300 / hora |
+| `shape_ssh` | `shape_ssh` | **Ilimitado** | **Ilimitado** | Ilimitadas | Ilimitados | **Shell SSH Activo (`HASSHELL=y`)** |
+
+> **Nota sobre `shape_ssh`:** Este paquete se utiliza de forma transitoria para habilitar acceso por terminal SSH a cuentas cPanel para mantenimientos, migraciones con rsync/wp-cli o restauraciones de backups de gran tamaño. Una vez concluida la labor técnica, la cuenta es regresada a su paquete comercial original.
 
 ---
 

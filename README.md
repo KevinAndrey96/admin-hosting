@@ -17,10 +17,12 @@ Panel de administración integral y portal de clientes para **Instance Shape** (
   - Bloqueo de transferencia (*Transfer Lock*) y monitorización de vencimientos.
 - **Facturación y Recordatorios Automáticos**:
   - Endpoint seguro de cron job (`/api/cron/renewal-reminders`) con token Bearer (`CRON_SECRET`).
-  - Notificaciones por correo electrónico a los 30, 15 y 7 días previos al vencimiento del servicio.
+  - Despacho automatizado de recordatorios los **días 1, 10 y 20 de cada mes** basado en fechas de corte de WHOIS.
+  - Health check quincenal (días 1 y 20) con pings HTTP a dominios activos.
   - Módulo de pagos con soporte para métodos directos (Bancolombia, Nequi, Daviplata, Bre-B) y pasarela (Mercado Pago).
 - **Control de Acceso y Clientes**:
   - Roles diferenciados: `ADMIN` (gestión completa del servidor y clientes) y `CLIENT` (portal de autoservicio).
+  - Paquete de mantenimiento `shape_ssh` (cuota ilimitada + SSH habilitado) para intervenciones y migraciones temporales.
   - Sesiones cifradas vía cookies seguras (`iron-session`).
 
 ---
@@ -30,7 +32,7 @@ Panel de administración integral y portal de clientes para **Instance Shape** (
 Para consultar las especificaciones técnicas y comerciales detalladas, revisa los documentos en la carpeta [`docs/`](./docs/):
 
 1. 📄 [**Modelo de Negocio, Paquetes y Precios** (`docs/BUSINESS_MODEL_AND_PACKAGES.md`)](./docs/BUSINESS_MODEL_AND_PACKAGES.md):  
-   Catálogo de los 5 planes oficiales (Bronze, Silver, Gold, Platinum, Diamond), tarifas en COP, cuotas de almacenamiento, ancho de banda, límites antispam y pasarelas de pago.
+   Catálogo de los 5 planes comerciales (Bronze, Silver, Gold, Platinum, Diamond) + paquete transitorio `shape_ssh`, tarifas en COP, cuotas, ciclo de cobro los días 1, 10 y 20, y pasarelas de pago.
 2. 📄 [**Integración con WHM API y Arquitectura Técnica** (`docs/WHM_INTEGRATION_AND_ARCHITECTURE.md`)](./docs/WHM_INTEGRATION_AND_ARCHITECTURE.md):  
    Protocolo de conexión reseller `shape`, requerimiento mandatorio de `api.version=1`, agentes SSL, resolución de usuarios cPanel y endpoints de aprovisionamiento.
 3. 📄 [**Auditoría de Cuentas y Optimización (Right-Sizing)** (`docs/ACCOUNTS_AUDIT_AND_RIGHTSIZING.md`)](./docs/ACCOUNTS_AUDIT_AND_RIGHTSIZING.md):  

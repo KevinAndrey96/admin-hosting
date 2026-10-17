@@ -39,6 +39,17 @@ Los paquetes están creados de forma idéntica en la base de datos del panel (`h
 | **Bases de Datos MySQL** | Ilimitadas | Ilimitadas | Ilimitadas | Ilimitadas | Ilimitadas |
 | **Subdominios y Cuentas FTP** | Ilimitados | Ilimitados | Ilimitados | Ilimitados | Ilimitados |
 
+### Paquete Temporal de Mantenimiento y Protocolo SSH (`shape_ssh`)
+Para operaciones avanzadas de soporte técnico, migraciones pesadas, importación de bases de datos o despliegues por terminal:
+- **Identificador WHM / Panel:** `shape_ssh`
+- **Almacenamiento (QUOTA):** Ilimitado (`unlimited`)
+- **Transferencia (BWLIMIT):** Ilimitado (`unlimited`)
+- **Acceso a Shell SSH (`HASSHELL`):** **Habilitado (`y`)**
+- **Protocolo de Operación:**
+  1. Cuando una cuenta cPanel requiera acceso SSH temporal o expansión de espacio para tareas de mantenimiento, el administrador cambia su paquete a `shape_ssh` (desde el panel o WHM).
+  2. Se ejecutan las labores de terminal requeridas (migración, rsync, wp-cli, composer, dumps de BD).
+  3. Finalizada la intervención, la cuenta se retorna de inmediato a su paquete comercial original (`shape_bronze`, `shape_silver`, etc.) para salvaguardar la seguridad del servidor y los límites contratados.
+
 ### Descripción y Perfil Recomendado por Plan
 1. **Bronze (`shape_bronze`)**: Diseñado para landing pages, sitios informativos, profesionales independientes y marcas personales con tráfico incipiente.
 2. **Silver (`shape_silver`)**: Para pequeñas empresas, portafolios y blogs con contenidos multimedia y tráfico recurrente.
@@ -79,11 +90,20 @@ El módulo de pagos del panel (`/pago`) admite los siguientes mecanismos de reca
 
 ## 5. Ciclo de Facturación y Automatización de Cobro
 
-1. **Vigencia:** Todos los contratos se liquidan con ciclo anual (12 meses).
+1. **Vigencia:** Todos los contratos se liquidan con ciclo anual (12 meses). Las fechas de expiración y corte están sincronizadas al 100% con los registros autoritativos de **WHOIS**.
 2. **Cron de Recordatorios (`/api/cron/renewal-reminders`):**
-   - Se ejecuta diariamente a las 12:00 PM (`0 12 * * *`).
-   - Requiere autenticación Bearer con `CRON_SECRET`.
-   - Envía avisos automáticos por correo a los clientes a los 30 días, 15 días y 7 días previos al vencimiento.
-3. **Manejo de Impagos:**
+   - **Días de Envío:** Se despachan exclusivamente los **días 1, 10 y 20 de cada mes** (los 3 cortes del ciclo de facturación).
+   - **Autenticación:** Requiere header `Authorization: Bearer <CRON_SECRET>` (admite bypass con `?force=true`).
+   - **Ventanas y Plantillas de Correo según días restantes:**
+     - **11 a 30 días:** Notificación preventiva estándar (*"Recordatorio: tu servicio vence en X días"*).
+     - **4 a 10 días:** Notificación urgente (*"¡Ya está por expirar! Solo quedan X días"*).
+     - **1 a 3 días:** Notificación de expiración inminente (*"¡Solo quedan X días / expira mañana!"*).
+     - **<= 0 días:** Notificación de servicio expirado (*"¡Tu servicio ha expirado! Renueva cuanto antes"*).
+   - **Notificaciones al Administrador:**
+     - Servicios por vencer en ≤ 10 días: consolidado para gestión comercial proactiva.
+     - Servicios vencidos o que vencen mañana (≤ 1 día): orden de suspensión preventiva si no hay comprobante de pago.
+3. **Health Check de Dominios:**
+   - Se ejecuta los **días 1 y 20 de cada mes** dentro del cron, realizando un ping HTTP proactivo a todos los dominios activos y alertando al administrador en caso de caídas (códigos 4xx, 5xx o timeouts).
+4. **Manejo de Impagos:**
    - La suspensión se realiza mediante API WHM (`whmSuspendAccount`), preservando la totalidad de archivos, bases de datos y buzones.
    - Tras el pago y verificación del comprobante en el panel, la desuspensión es inmediata en 1 clic (`whmUnsuspendAccount`).

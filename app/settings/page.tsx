@@ -318,7 +318,7 @@ export default function SettingsPage() {
                     </label>
                   </div>
                   <p className="fsz-sm c-grey-600 mB-15">
-                    Configura un cron que llame a <code className="fsz-xs">/api/cron/renewal-reminders</code> diariamente (Vercel Cron, cron-job.org, etc.). Usa el header <code className="fsz-xs">Authorization: Bearer CRON_SECRET</code>.
+                    Configura un cron que llame a <code className="fsz-xs">/api/cron/renewal-reminders</code> diariamente o los días 1, 10 y 20 de cada mes (Vercel Cron, cron-job.org, etc.). El sistema despacha notificaciones exclusivamente los días 1, 10 y 20 de cada mes. Usa el header <code className="fsz-xs">Authorization: Bearer CRON_SECRET</code>.
                   </p>
                   <h6 className="mB-15 mT-25">Colores de marca</h6>
                   <div className="row">

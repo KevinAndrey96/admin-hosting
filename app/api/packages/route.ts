@@ -118,8 +118,10 @@ export async function POST(request: NextRequest) {
 
     const colorHex = body.colorHex?.trim();
     const colorHexVal = colorHex && /^#[0-9A-Fa-f]{6}$/.test(colorHex) ? colorHex : null;
+    const explicitId = body.id?.trim() || undefined;
     const pkg = await prisma.hostingPackage.create({
       data: {
+        ...(explicitId ? { id: explicitId } : {}),
         name: nameNorm,
         ...(colorHexVal != null && { colorHex: colorHexVal }),
         salePrice: salePriceNum,

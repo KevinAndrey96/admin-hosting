@@ -15,16 +15,21 @@ import { pingDomain } from '@/lib/domain-ping';
 
 /**
  * Cron endpoint: sends renewal reminders to clients whose domains or hosting
- * expire in 30, 15, 7, 5, 3, or 1 day(s). At 5 days: urgent "about to expire" message.
- * At 3 and 1 day: "domain/service has expired" notification.
- * Includes: avoid reactivation costs, avoid data loss, button to panel.
+ * are due for renewal, executed strictly on days 1, 10, and 20 of each month.
+ *
+ * Cadence:
+ * - Days 1, 10, 20: Sends reminders for services expiring in the next 30 days
+ *   (or recently expired within 30 days):
+ *   - 11 to 30 days: Standard reminder (preventive notice).
+ *   - 4 to 10 days: Urgent warning ("Solo quedan X días").
+ *   - 1 to 3 days: Imminent expiration / tomorrow warning.
+ *   - <= 0 days: Service expired notice.
+ * - Days 1 and 20: Domain health check ping for all active domains sent to admins.
+ * - Bypass: Append `?force=true` to force execution outside of days 1, 10, and 20.
  *
  * Call from Vercel Cron or external service (cron-job.org, etc.):
  * GET /api/cron/renewal-reminders
  * Header: Authorization: Bearer <CRON_SECRET>
- *
- * Environment variables:
- * - CRON_SECRET: secret to authorize the request (required in production)
  */
 
 export async function GET(request: NextRequest) {
@@ -57,13 +62,26 @@ export async function GET(request: NextRequest) {
     });
     const adminEmails = admins.map((a) => a.email).filter(Boolean);
 
-    const items7days: AdminReminderItem[] = [];
-    const items1day: AdminReminderItem[] = [];
+    const itemsExpiringSoon: AdminReminderItem[] = [];
+    const itemsUrgentOrExpired: AdminReminderItem[] = [];
 
-    // Domain health check: days 1 and 15 of each month
     const today = new Date();
     const dayOfMonth = today.getDate();
-    if (dayOfMonth === 1 || dayOfMonth === 15) {
+    const force = request.nextUrl.searchParams.get('force') === 'true';
+
+    // Regla de negocio: los recordatorios se envían exclusivamente los días 1, 10 y 20 de cada mes
+    const isReminderDay = dayOfMonth === 1 || dayOfMonth === 10 || dayOfMonth === 20;
+    if (!isReminderDay && !force) {
+      return NextResponse.json({
+        message: `Hoy (día ${dayOfMonth}) no es fecha de envío de recordatorios. Los recordatorios se envían los días 1, 10 y 20 de cada mes. Usa ?force=true para forzar ejecución manual.`,
+        sent: 0,
+        healthCheckSent: 0,
+        byDay: {},
+      });
+    }
+
+    // Domain health check: días 1 y 20 de cada mes (o con ?force=true)
+    if (dayOfMonth === 1 || dayOfMonth === 20 || force) {
       const allDomains = await prisma.domain.findMany({
         include: { user: { select: { fullName: true } } },
       });
@@ -96,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     if (!enabled) {
       return NextResponse.json({
-        message: 'Recordatorios desactivados',
+        message: 'Recordatorios desactivados en configuración',
         sent: healthCheckSent,
         healthCheckSent,
         byDay: {},
@@ -131,8 +149,8 @@ export async function GET(request: NextRequest) {
       sent++;
       byDay[daysLeft] = (byDay[daysLeft] || 0) + 1;
 
-      if (daysLeft === 7) {
-        items7days.push({
+      if (daysLeft <= 10 && daysLeft > 1) {
+        itemsExpiringSoon.push({
           type: 'domain',
           id: d.id,
           clientName: d.user.fullName,
@@ -142,8 +160,8 @@ export async function GET(request: NextRequest) {
           editUrl: `${appUrl}${basePath}/domains/${d.id}/edit`,
         });
       }
-      if (daysLeft === 1) {
-        items1day.push({
+      if (daysLeft <= 1 && daysLeft >= -30) {
+        itemsUrgentOrExpired.push({
           type: 'domain',
           id: d.id,
           clientName: d.user.fullName,
@@ -187,8 +205,8 @@ export async function GET(request: NextRequest) {
       sent++;
       byDay[daysLeft] = (byDay[daysLeft] || 0) + 1;
 
-      if (daysLeft === 7) {
-        items7days.push({
+      if (daysLeft <= 10 && daysLeft > 1) {
+        itemsExpiringSoon.push({
           type: 'hosting',
           id: h.id,
           clientName: h.user.fullName,
@@ -198,8 +216,8 @@ export async function GET(request: NextRequest) {
           editUrl: `${appUrl}${basePath}/hosting/${h.id}/edit`,
         });
       }
-      if (daysLeft === 1) {
-        items1day.push({
+      if (daysLeft <= 1 && daysLeft >= -30) {
+        itemsUrgentOrExpired.push({
           type: 'hosting',
           id: h.id,
           clientName: h.user.fullName,
@@ -212,26 +230,26 @@ export async function GET(request: NextRequest) {
     }
 
     for (const adminEmail of adminEmails) {
-      if (items7days.length > 0) {
+      if (itemsExpiringSoon.length > 0) {
         const { subject, html } = buildAdminReminderEmail({
           companyName,
           logoFullUrl,
           appUrl,
           basePath,
           kind: 'remind_user',
-          items: items7days,
+          items: itemsExpiringSoon,
         });
         await sendEmail({ to: adminEmail, subject, html });
         sent++;
       }
-      if (items1day.length > 0) {
+      if (itemsUrgentOrExpired.length > 0) {
         const { subject, html } = buildAdminReminderEmail({
           companyName,
           logoFullUrl,
           appUrl,
           basePath,
           kind: 'suspend_user',
-          items: items1day,
+          items: itemsUrgentOrExpired,
         });
         await sendEmail({ to: adminEmail, subject, html });
         sent++;

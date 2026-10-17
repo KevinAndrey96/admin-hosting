@@ -85,6 +85,7 @@ model Setting {
 /// - shape_gold: 2.000 MB, 200 GB BW, ilimitados emails, 1 addon, 60 emails/h
 /// - shape_platinum: 5.000 MB, 500 GB BW, ilimitados emails, 2 addons, 60 emails/h
 /// - shape_diamond: 10.000 MB, 1 TB BW, ilimitados emails, ilimitados addons, 300 emails/h
+/// - shape_ssh: Quota ilimitada, BW ilimitado, Shell SSH activo (paquete temporal de mantenimiento)
 model HostingPackage {
   id                 String   @id @default(cuid())
   name               String   @map("name")
