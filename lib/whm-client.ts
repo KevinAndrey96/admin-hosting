@@ -1,6 +1,20 @@
 /**
- * WHM API client for cPanel account suspend/unsuspend.
- * Uses native https with rejectUnauthorized: false for WHM servers with self-signed certs.
+ * WHM API v1 Client for cPanel Account Lifecycle & Resource Management.
+ * 
+ * Target Server: 46.224.80.244:2087 (Reseller: `shape`)
+ * Authentication: `Authorization: whm ${WHM_USER}:${WHM_TOKEN}`
+ * 
+ * IMPORTANT:
+ * 1. `api.version=1` is MANDATORY for all reseller calls to `/json-api/*`.
+ *    Without it, WHM assumes legacy/root API and returns 403 / "Access denied".
+ * 2. Uses native `https` agent with `rejectUnauthorized: false` to allow
+ *    connecting to the WHM management port using self-signed or server certificates.
+ * 
+ * Implemented Actions:
+ * - listaccts: Real-time accounts list, disk usage (`diskused`), and status.
+ * - createacct: Automated cPanel account provisioning.
+ * - changepackage: Real-time quota and resource resizing.
+ * - suspendacct / unsuspendacct: Delinquency control and service reactivation.
  */
 
 import https from 'https';
@@ -97,6 +111,17 @@ export async function whmSuspendAccount(
  */
 export async function whmUnsuspendAccount(username: string): Promise<WhmResult> {
   return whmRequest('unsuspendacct', { user: username });
+}
+
+/**
+ * Changes a cPanel account's hosting package in WHM (changepackage).
+ * Updates quotas, email limits, bandwidth, and antispam limits automatically in cPanel.
+ */
+export async function whmChangePackage(
+  username: string,
+  pkg: string
+): Promise<WhmResult> {
+  return whmRequest('changepackage', { user: username, pkg });
 }
 
 export type WhmCreateAccountResult =
