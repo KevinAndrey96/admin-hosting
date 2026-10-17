@@ -23,8 +23,8 @@ async function whmRequest(
     return { ok: false, error: 'WHM_API_TOKEN no configurado' };
   }
 
-  const search = new URLSearchParams(params).toString();
-  const path = `/json-api/${endpoint}${search ? `?${search}` : ''}`;
+  const search = new URLSearchParams({ 'api.version': '1', ...params }).toString();
+  const path = `/json-api/${endpoint}?${search}`;
 
   return new Promise((resolve) => {
     const opts: https.RequestOptions = {
@@ -129,7 +129,7 @@ export async function whmCreateAccount(params: {
     q.contactemail = params.contactemail.trim();
   }
 
-  const search = new URLSearchParams(q).toString();
+  const search = new URLSearchParams({ 'api.version': '1', ...q }).toString();
   const path = `/json-api/createacct?${search}`;
 
   return new Promise((resolve) => {
@@ -240,8 +240,7 @@ export async function whmListAccounts(): Promise<
     return { ok: false, error: 'WHM_API_TOKEN no configurado' };
   }
 
-  // No 'want' param - get full response; some WHM versions handle it differently
-  const path = '/json-api/listaccts';
+  const path = '/json-api/listaccts?api.version=1';
 
   return new Promise((resolve) => {
     const opts: https.RequestOptions = {
