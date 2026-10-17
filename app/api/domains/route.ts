@@ -95,6 +95,7 @@ export async function GET() {
         status: domain.status,
         transferLock: domain.transferLock,
         healthStatus: domain.healthStatus,
+        paymentProofPath: domain.paymentProofPath,
         createdAt: domain.createdAt,
       };
     });

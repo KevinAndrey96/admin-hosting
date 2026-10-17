@@ -28,19 +28,22 @@ export function getReminderType(daysLeft: number): ReminderType | null {
 
 function buildTips(reactivationPenalty?: string, serviceLabel: 'dominio' | 'servicio' = 'dominio'): string {
   const penaltyLine =
-    reactivationPenalty?.trim() ?
-      `<p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#4a4a68;">
-    • Costo de reactivación por ${serviceLabel} vencido: <strong>${reactivationPenalty.trim()}</strong>
-  </p>`
-    : '';
+    reactivationPenalty?.trim()
+      ? `<p style="margin:0 0 10px;font-size:13px;line-height:1.5;color:#dc2626;">
+          ⚠️ Costo de reactivación extemporánea por ${serviceLabel} vencido: <strong>$${Number(reactivationPenalty).toLocaleString('es-CO')} COP</strong>
+        </p>`
+      : '';
+
   return `
-  ${penaltyLine}
-  <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#4a4a68;">
-    • Evita costos extra por servicios vencidos (reactivación).
-  </p>
-  <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#4a4a68;">
-    • Evita pérdida de información renovando ahora.
-  </p>`;
+  <div style="background:#f8fafc;border-left:4px solid #6366f1;padding:14px 16px;border-radius:0 8px 8px 0;margin:18px 0;">
+    ${penaltyLine}
+    <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#334155;">
+      🔒 <strong>Garantía de continuidad:</strong> Renovar a tiempo evita la interrupción de tus correos corporativos, caídas de tu página web y pérdida de indexación en buscadores.
+    </p>
+    <p style="margin:0;font-size:13px;line-height:1.5;color:#334155;">
+      💡 <strong>Aprovecha al máximo tu servidor:</strong> Tu alojamiento incluye aceleración <em>LiteSpeed Cache</em> (WordPress y PHP), certificados SSL ilimitados y buzones de correo protegidos con autenticación SPF/DKIM para entrega directa en bandeja de entrada.
+    </p>
+  </div>`;
 }
 
 export function buildDomainReminderEmail(params: {

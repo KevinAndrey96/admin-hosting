@@ -53,6 +53,18 @@ export async function POST(request: NextRequest) {
     session.isLoggedIn = true;
     await session.save();
 
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || undefined;
+    const userAgent = request.headers.get('user-agent') || undefined;
+
+    // Registrar inicio de sesión en historial para auditoría y reporte mensual
+    await prisma.loginHistory.create({
+      data: {
+        userID: user.id,
+        ipAddress,
+        userAgent,
+      },
+    }).catch((e) => console.error('[Login] Error saving login history:', e));
+
     return NextResponse.json({
       message: 'Login successful',
       user: {

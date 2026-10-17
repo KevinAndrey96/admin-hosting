@@ -27,6 +27,7 @@ type Hosting = {
   nextBillingDate: string;
   paymentStatus: string;
   serviceStatus: string;
+  paymentProofPath?: string | null;
 };
 
 type Package = {
@@ -840,6 +841,17 @@ export default function HostingPage() {
                               >
                                 <i className="ti-plus" style={{ fontSize: 18 }} />
                               </button>
+                              {h.paymentProofPath && (
+                                <a
+                                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/api/pago/comprobante/${encodeURIComponent(h.paymentProofPath.split('/').pop() || '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-sm btn-outline-info p-8 m-0"
+                                  title="Ver comprobante de pago"
+                                >
+                                  <i className="ti-receipt" style={{ fontSize: 18 }} />
+                                </a>
+                              )}
                               <Link
                                 href={`/hosting/${h.id}/edit`}
                                 className="btn btn-sm btn-primary"

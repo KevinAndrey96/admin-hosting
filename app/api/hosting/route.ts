@@ -42,7 +42,12 @@ export async function GET(request: NextRequest) {
     const list = hosting.map((h) => {
       const domains = h.domains.map((hd) => hd.domain.fqdn.toLowerCase().trim());
       const matchedDomain = domains.find((d) => d in whmByDomain);
-      const diskUsed = matchedDomain ? whmByDomain[matchedDomain]?.diskused : undefined;
+      const matchedByAccount = Object.values(whmByDomain).find(
+        (a) => a.user.toLowerCase() === h.username.toLowerCase()
+      );
+      const diskUsed = matchedDomain
+        ? whmByDomain[matchedDomain]?.diskused
+        : matchedByAccount?.diskused;
       const { salePrice, currency } = getHostingEffectivePrice({
         salePriceOverride: h.salePriceOverride,
         hostingPackage: h.hostingPackage,
@@ -67,6 +72,7 @@ export async function GET(request: NextRequest) {
         nextBillingDate: h.nextBillingDate,
         paymentStatus: h.paymentStatus,
         serviceStatus: String(h.serviceStatus),
+        paymentProofPath: h.paymentProofPath,
         createdAt: h.createdAt,
       };
     });

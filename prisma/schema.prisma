@@ -47,8 +47,22 @@ model User {
   passwordResetTokens       PasswordResetToken[]
   domains                   Domain[]
   hosting                   HostingService[]
+  loginHistory              LoginHistory[]
 
   @@map("users")
+}
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userID    String   @map("user_id")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userID], references: [id], onDelete: Cascade)
+
+  @@index([userID, createdAt])
+  @@map("login_history")
 }
 
 model PasswordResetToken {
@@ -190,6 +204,7 @@ model HostingService {
   paymentStatus     PaymentStatus       @default(PENDING) @map("payment_status")
   serviceStatus     HostingServiceStatus @default(ENABLED) @map("service_status")
   salePriceOverride Decimal?            @map("sale_price_override") @db.Decimal(10, 2) // null = inherit from package
+  paymentProofPath  String?             @map("payment_proof_path")
   createdAt         DateTime            @default(now()) @map("created_at")
   updatedAt         DateTime            @updatedAt @map("updated_at")
 

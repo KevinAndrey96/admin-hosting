@@ -3,6 +3,12 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { getHostingEffectivePrice, toNumber } from '@/lib/hosting-price';
+import {
+  whmListAccounts,
+  whmChangePackage,
+  whmSuspendAccount,
+  whmUnsuspendAccount,
+} from '@/lib/whm-client';
 
 function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
   return session.isLoggedIn && session.role === 'ADMIN';
@@ -177,6 +183,49 @@ export async function PUT(
     ]);
 
     const updated = await getHostingById(id);
+
+    // Sincronización automática e instantánea con WHM API si cambió paquete o estado de servicio
+    try {
+      const packageChanged = data.packageID && data.packageID !== existing.packageID;
+      const statusChanged = data.serviceStatus && data.serviceStatus !== existing.serviceStatus;
+
+      if (packageChanged || statusChanged) {
+        const whmAccounts = await whmListAccounts();
+        const byDomain = whmAccounts.ok && whmAccounts.accounts ? whmAccounts.accounts : {};
+        const linkedFqdns = updated?.domainFqdns?.map((f) => f.toLowerCase().trim()) || [];
+        const matchedDomain = linkedFqdns.find((f) => f in byDomain);
+        const matchedAccount = Object.values(byDomain).find(
+          (a) => a.user.toLowerCase() === existing.username.toLowerCase()
+        );
+        const effectiveWhmUser = matchedDomain
+          ? byDomain[matchedDomain].user
+          : matchedAccount
+            ? matchedAccount.user
+            : existing.username;
+
+        // 1. Sincronizar cambio de paquete
+        if (packageChanged) {
+          const pkgResult = await whmChangePackage(effectiveWhmUser, data.packageID as string);
+          if (!pkgResult.ok) {
+            console.warn(`[WHM Sync] Error al cambiar paquete a ${data.packageID} para ${effectiveWhmUser}: ${pkgResult.error}`);
+          } else {
+            console.log(`[WHM Sync] Paquete de ${effectiveWhmUser} cambiado a ${data.packageID} en WHM exitosamente.`);
+          }
+        }
+
+        // 2. Sincronizar suspensión / activación
+        if (statusChanged) {
+          if (data.serviceStatus === 'SUSPENDED') {
+            await whmSuspendAccount(effectiveWhmUser, 'Suspensión desde panel admin');
+          } else if (data.serviceStatus === 'ENABLED' && existing.serviceStatus === 'SUSPENDED') {
+            await whmUnsuspendAccount(effectiveWhmUser);
+          }
+        }
+      }
+    } catch (whmErr) {
+      console.error('[WHM Sync] Error no fatal al sincronizar con WHM:', whmErr);
+    }
+
     return NextResponse.json(updated!);
   } catch (error) {
     console.error('Hosting PUT error:', error);

@@ -57,18 +57,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'El archivo no debe superar 5 MB' }, { status: 400 });
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    const mimeToExt: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'application/pdf': '.pdf',
+    };
+
+    if (!mimeToExt[file.type]) {
       return NextResponse.json({ error: 'Solo se permiten imágenes (JPEG, PNG, GIF, WebP) o PDF' }, { status: 400 });
     }
 
-    const ext = file.type === 'application/pdf' ? '.pdf' : path.extname(file.name) || '.jpg';
+    // Seguridad: forzar la extensión basada en el tipo MIME verificado, nunca en file.name del cliente
+    const ext = mimeToExt[file.type];
     const filename = `comprobante_${Date.now()}_${session.userId?.slice(0, 8)}${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Save to disk as backup
+    // Guardar físicamente en disco para consulta y auditoría desde el panel
     const uploadDir = path.join(process.cwd(), 'uploads', 'comprobantes');
     await mkdir(uploadDir, { recursive: true });
     const filepath = path.join(uploadDir, filename);
+    await writeFile(filepath, buffer);
 
     // Handle domain registration requests
     if (tipo === 'registrar-dominio' && domainIdTransfer) {
@@ -118,6 +128,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // For domain renewals or direct domain contract: update proof path
+    if (domainIdTransfer && (tipo === 'renovar-dominio' || tipo === 'contratar-dominio')) {
+      await prisma.domain.updateMany({
+        where: {
+          id: domainIdTransfer,
+          ...(session.role !== 'ADMIN' ? { userID: session.userId } : {}),
+        },
+        data: {
+          paymentProofPath: filename,
+        },
+      });
+    }
+
     const client = await prisma.user.findUnique({
       where: { id: session.userId },
       select: { fullName: true, email: true },
@@ -142,6 +165,10 @@ export async function POST(request: NextRequest) {
       });
       if (hosting) {
         hostingInfo = { id: hosting.id, username: hosting.username };
+        await prisma.hostingService.update({
+          where: { id: hosting.id },
+          data: { paymentProofPath: filename },
+        });
       }
     }
 

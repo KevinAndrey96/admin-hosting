@@ -27,6 +27,7 @@ type Domain = {
   status?: string;
   transferLock: boolean;
   healthStatus: string;
+  paymentProofPath?: string | null;
   createdAt: string;
 };
 
@@ -1054,7 +1055,32 @@ const [registrationRequests, setRegistrationRequests] = useState<RegistrationReq
                                   </>
                                 );
                               })()
-                            ) : null}
+                            ) : (
+                              <>
+                                <span
+                                  className="badge rounded-pill fsz-xs"
+                                  style={{
+                                    backgroundColor:
+                                      d.healthStatus === 'UP'
+                                        ? '#20c997'
+                                        : d.healthStatus === 'DOWN'
+                                          ? '#dc3545'
+                                          : '#6c757d',
+                                    color: '#fff',
+                                  }}
+                                >
+                                  {d.healthStatus === 'UP' ? 'En línea' : d.healthStatus === 'DOWN' ? 'Caído' : 'Sin verificar'}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-link p-0 m-0"
+                                  onClick={() => pingDomain(d.fqdn, d.id)}
+                                  title="Verificar ahora"
+                                >
+                                  <i className="ti-reload c-grey-500" />
+                                </button>
+                              </>
+                            )}
                           </span>
                         </td>
                         <td className="ta-e">
@@ -1077,6 +1103,17 @@ const [registrationRequests, setRegistrationRequests] = useState<RegistrationReq
                             >
                               <i className="ti-world" />
                             </a>
+                            {d.paymentProofPath && (
+                              <a
+                                href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/api/pago/comprobante/${encodeURIComponent(d.paymentProofPath.split('/').pop() || '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-sm btn-outline-info d-f ai-c jc-c"
+                                title="Ver comprobante de pago"
+                              >
+                                <i className="ti-receipt" />
+                              </a>
+                            )}
                             {user?.role === 'ADMIN' && (
                               <>
                                 <button

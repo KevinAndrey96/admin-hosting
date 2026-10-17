@@ -8,28 +8,23 @@ import {
   buildDomainReminderEmail,
   buildHostingReminderEmail,
   buildAdminReminderEmail,
-  buildDomainHealthCheckEmail,
   type AdminReminderItem,
 } from '@/lib/renewal-reminder-email';
-import { pingDomain } from '@/lib/domain-ping';
+import { generateAndSendDailyAdminReport } from '@/lib/daily-admin-report';
 
 /**
- * Cron endpoint: sends renewal reminders to clients whose domains or hosting
- * are due for renewal, executed strictly on days 1, 10, and 20 of each month.
+ * Endpoint de Cron Automatizado de Instance Shape.
  *
- * Cadence:
- * - Days 1, 10, 20: Sends reminders for services expiring in the next 30 days
- *   (or recently expired within 30 days):
- *   - 11 to 30 days: Standard reminder (preventive notice).
- *   - 4 to 10 days: Urgent warning ("Solo quedan X días").
- *   - 1 to 3 days: Imminent expiration / tomorrow warning.
- *   - <= 0 days: Service expired notice.
- * - Days 1 and 20: Domain health check ping for all active domains sent to admins.
- * - Bypass: Append `?force=true` to force execution outside of days 1, 10, and 20.
+ * Tareas:
+ * 1. DIARIAMENTE: Envía al Administrador el Informe Ejecutivo Diario:
+ *    - Monitor de salud de todos los sitios (HTTP ping con alerta si alguno está caído).
+ *    - Estadísticas financieras: valores a recaudar y renovaciones en próximos 30 días.
+ *    - Auditoría de inicios de sesión en el mes: quiénes y cuántas veces han accedido.
+ *    - Tips y métricas clave de servidor (tráfico soportado, cuotas de correo, caché).
+ * 2. DÍAS 1, 10 Y 20 DE CADA MES: Despacha recordatorios automáticos de cobro a clientes.
  *
- * Call from Vercel Cron or external service (cron-job.org, etc.):
- * GET /api/cron/renewal-reminders
- * Header: Authorization: Bearer <CRON_SECRET>
+ * Parámetros opcionales:
+ * - ?force=true: Fuerza el despacho a clientes aunque no sea día 1, 10 o 20.
  */
 
 export async function GET(request: NextRequest) {
@@ -46,15 +41,22 @@ export async function GET(request: NextRequest) {
     const settings = await getSettings();
     const enabled = settings.renewal_reminder_enabled === 'true' || settings.renewal_reminder_enabled === '1';
 
-    const companyName = settings.company_name || 'Admin';
+    const companyName = settings.company_name || 'Instance Shape SAS';
     const logoUrl = settings.logo_url || '';
     const logoFullUrl = logoUrl?.startsWith('http') ? logoUrl : logoUrl ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://instanceshape.com'}${logoUrl}` : '';
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
     const appUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://instanceshape.com').replace(/\/$/, '');
 
+    // 1. INFORME EJECUTIVO DIARIO AL ADMINISTRADOR (Ejecutado cada día)
+    const dailyReport = await generateAndSendDailyAdminReport({
+      companyName,
+      logoFullUrl,
+      appUrl,
+      basePath,
+    });
+
     let sent = 0;
     const byDay: Record<number, number> = {};
-    let healthCheckSent = 0;
 
     const admins = await prisma.user.findMany({
       where: { role: 'ADMIN', status: 'ENABLED' },
@@ -69,54 +71,22 @@ export async function GET(request: NextRequest) {
     const dayOfMonth = today.getDate();
     const force = request.nextUrl.searchParams.get('force') === 'true';
 
-    // Regla de negocio: los recordatorios se envían exclusivamente los días 1, 10 y 20 de cada mes
+    // 2. DISPATCH A CLIENTES: Exclusivamente los días 1, 10 y 20 de cada mes (o con ?force=true)
     const isReminderDay = dayOfMonth === 1 || dayOfMonth === 10 || dayOfMonth === 20;
     if (!isReminderDay && !force) {
       return NextResponse.json({
-        message: `Hoy (día ${dayOfMonth}) no es fecha de envío de recordatorios. Los recordatorios se envían los días 1, 10 y 20 de cada mes. Usa ?force=true para forzar ejecución manual.`,
-        sent: 0,
-        healthCheckSent: 0,
+        message: `Informe diario enviado al administrador (${dailyReport.recipientsCount} admins). Hoy (día ${dayOfMonth}) no corresponde despacho de recordatorios a clientes (días 1, 10 y 20). Usa ?force=true para forzar envío masivo.`,
+        dailyReport,
+        clientRemindersSent: 0,
         byDay: {},
       });
-    }
-
-    // Domain health check: días 1 y 20 de cada mes (o con ?force=true)
-    if (dayOfMonth === 1 || dayOfMonth === 20 || force) {
-      const allDomains = await prisma.domain.findMany({
-        include: { user: { select: { fullName: true } } },
-      });
-      const healthItems: { fqdn: string; clientName: string; statusCode: number | null; daysLeft: number }[] = [];
-      for (const d of allDomains) {
-        const statusCode = await pingDomain(d.fqdn);
-        const daysLeft = getDaysUntilExpiration(new Date(d.nextBillingDate));
-        healthItems.push({
-          fqdn: d.fqdn,
-          clientName: d.user.fullName,
-          statusCode,
-          daysLeft,
-        });
-      }
-      if (healthItems.length > 0 && adminEmails.length > 0) {
-        const { subject, html } = buildDomainHealthCheckEmail({
-          companyName,
-          logoFullUrl,
-          appUrl,
-          basePath,
-          items: healthItems,
-          date: today,
-        });
-        for (const adminEmail of adminEmails) {
-          await sendEmail({ to: adminEmail, subject, html });
-          healthCheckSent++;
-        }
-      }
     }
 
     if (!enabled) {
       return NextResponse.json({
         message: 'Recordatorios desactivados en configuración',
-        sent: healthCheckSent,
-        healthCheckSent,
+        dailyReport,
+        sent: 0,
         byDay: {},
       });
     }
@@ -257,9 +227,9 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: `Recordatorios enviados: ${sent}${healthCheckSent > 0 ? `, health check: ${healthCheckSent}` : ''}`,
-      sent: sent + healthCheckSent,
-      healthCheckSent,
+      message: `Ejecución completada: informe ejecutivo enviado a administradores y ${sent} recordatorios de clientes despachados.`,
+      dailyReport,
+      clientRemindersSent: sent,
       byDay,
     });
   } catch (error) {
