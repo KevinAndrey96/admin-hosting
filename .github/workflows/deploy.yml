@@ -25,11 +25,14 @@ jobs:
         run: npm ci || npm install
 
       - name: Generate Prisma Client & Build Next.js
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'mysql://shape_hosting:Hosting2026@127.0.0.1:3306/shape_hosting' }}
+          NEXT_PUBLIC_BASE_PATH: /admin
         run: npm run build
 
       - name: Create Clean Deploy ZIP
         run: |
-          zip -r admin-deploy-prod.zip .htaccess package.json start-server.js next.config.js tsconfig.json .next/standalone app lib prisma types public -x "*.DS_Store" -x "node_modules/*" -x ".next/cache/*"
+          zip -r admin-deploy-prod.zip .htaccess package.json start-server.js next.config.js tsconfig.json prisma.config.ts .next/standalone app lib prisma types public -x "*.DS_Store" -x "node_modules/*" -x ".next/cache/*"
 
       - name: Transfer Deployment Package to cPanel
         uses: appleboy/scp-action@master
