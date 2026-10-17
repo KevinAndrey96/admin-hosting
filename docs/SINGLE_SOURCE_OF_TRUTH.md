@@ -102,6 +102,38 @@ Todos los registros fueron auditados y sincronizados en la base de datos de prod
 
 ---
 
+### 4.5. Integración Continua y Despliegue Automático con GitHub Actions
+- **Workflow (`.github/workflows/deploy.yml`):**
+  - Se activa automáticamente con cada `git push` a las ramas `admin-hosting` o `main`.
+  - Construye la aplicación Next.js standalone en los runners de GitHub (0% consumo de CPU/RAM del servidor cPanel).
+  - Empaqueta el release en `admin-deploy-prod.zip`.
+  - Transfiere el paquete por SCP y lo descomprime en el servidor (`shape@46.224.80.244`), asegurando la creación de carpetas de almacenamiento y reiniciando Passenger con `touch tmp/restart.txt`.
+  - **Secretos de Repositorio Requeridos en GitHub:**
+    - `CPANEL_SSH_KEY`: Llave privada SSH para conectar a la cuenta `shape`.
+    - `CPANEL_SSH_HOST` (Opcional, defecto `46.224.80.244`).
+    - `CPANEL_SSH_USER` (Opcional, defecto `shape`).
+    - `CPANEL_SSH_PORT` (Opcional, defecto `22`).
+
+### 4.6. Casilla de Solo Salida `no-reply@instanceshape.com`
+- **Configuración UAPI en cPanel:**
+  - Creada en el servidor con cuota de 1 GB.
+  - Forwarder de rechazo configurado vía Exim UAPI: `:fail: Esta casilla es exclusivamente para notificaciones salientes automáticas y no recibe mensajes.`.
+  - Permite autenticación SMTP saliente (puertos 465 SSL / 587 TLS), pero rechaza cualquier correo entrante a nivel SMTP sin almacenar mensajes no deseados en disco.
+
+### 4.7. Resumen Mensual de Servicios a Clientes (Día 1 de Cada Mes)
+- **Despacho Automático:**
+  - Se ejecuta el día 1 de cada mes (o invocando el cron con `?monthly=true`).
+  - Envía a cada cliente activo un reporte visual con sus dominios, hosting, cuotas y capacidad estimada de tráfico.
+  - **Llamado a la Acción Destacado:** Resalta un bloque con su nombre de usuario (su correo electrónico) y un botón de acceso directo a `https://instanceshape.com/admin/signin`.
+  - Incluye tips prácticos para aprovechar su servidor (LiteSpeed Cache, configuración de correo IMAP/SMTP y certificados SSL).
+
+### 4.8. Corrección de Parámetros de URL en Apache Proxy (.htaccess)
+- Se incorporó la bandera `QSA` (Query String Append) en la regla de proxy de `.htaccess`:
+  `RewriteRule ^ http://127.0.0.1:3001%{REQUEST_URI} [P,QSA,L]`
+  Esto garantiza que parámetros como `?token=...`, `?force=true` o `?monthly=true` pasen intactos desde el puerto 443 al servidor Node.js local en el puerto 3001.
+
+---
+
 ## 5. Procedimiento de Despliegue en Producción (Referencia)
 
 El despliegue se realiza directamente vía SSH / Git / Zip sin necesidad de intervención manual en la interfaz web de cPanel:

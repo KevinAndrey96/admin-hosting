@@ -57,8 +57,9 @@ export function buildDomainReminderEmail(params: {
   appUrl: string;
   basePath: string;
   reactivationPenalty?: string;
+  clientEmail?: string;
 }): { subject: string; html: string } {
-  const { companyName, logoFullUrl, clientName, fqdn, expDate, daysLeft, type, appUrl, basePath, reactivationPenalty } = params;
+  const { companyName, logoFullUrl, clientName, fqdn, expDate, daysLeft, type, appUrl, basePath, reactivationPenalty, clientEmail } = params;
   const btnUrl = `${appUrl}${basePath}/domains`;
   const btnText = 'Ir al panel de dominios';
 
@@ -110,6 +111,12 @@ export function buildDomainReminderEmail(params: {
           <p style="margin:0 0 16px;text-align:center;">
             <a href="${btnUrl}" style="display:inline-block;padding:12px 24px;background:#0d6efd;color:#fff !important;text-decoration:none;font-weight:600;border-radius:8px;">${btnText}</a>
           </p>
+          ${clientEmail ? `
+          <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:12px 16px;margin:16px 0;text-align:center;">
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#3730a3;">
+              🔑 Recuerda que puedes ingresar al panel haciendo clic <a href="${appUrl}${basePath}/signin" style="color:#4338ca;font-weight:bold;text-decoration:underline;">aquí</a> usando tu correo <strong>${clientEmail}</strong> como usuario.
+            </p>
+          </div>` : ''}
         </td></tr>
         <tr><td style="padding:20px 32px;background:#f8f9fa;border-top:1px solid #eee;">
           <p style="margin:0;font-size:12px;color:#6c757d;text-align:center;">${companyName}</p>
@@ -135,8 +142,9 @@ export function buildHostingReminderEmail(params: {
   appUrl: string;
   basePath: string;
   reactivationPenalty?: string;
+  clientEmail?: string;
 }): { subject: string; html: string } {
-  const { companyName, logoFullUrl, clientName, packageName, username, expDate, daysLeft, type, appUrl, basePath, reactivationPenalty } = params;
+  const { companyName, logoFullUrl, clientName, packageName, username, expDate, daysLeft, type, appUrl, basePath, reactivationPenalty, clientEmail } = params;
   const btnUrl = `${appUrl}${basePath}/hosting`;
   const btnText = 'Ir al panel de hosting';
 
@@ -188,6 +196,12 @@ export function buildHostingReminderEmail(params: {
           <p style="margin:0 0 16px;text-align:center;">
             <a href="${btnUrl}" style="display:inline-block;padding:12px 24px;background:#0d6efd;color:#fff !important;text-decoration:none;font-weight:600;border-radius:8px;">${btnText}</a>
           </p>
+          ${clientEmail ? `
+          <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:12px 16px;margin:16px 0;text-align:center;">
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#3730a3;">
+              🔑 Recuerda que puedes ingresar al panel haciendo clic <a href="${appUrl}${basePath}/signin" style="color:#4338ca;font-weight:bold;text-decoration:underline;">aquí</a> usando tu correo <strong>${clientEmail}</strong> como usuario.
+            </p>
+          </div>` : ''}
         </td></tr>
         <tr><td style="padding:20px 32px;background:#f8f9fa;border-top:1px solid #eee;">
           <p style="margin:0;font-size:12px;color:#6c757d;text-align:center;">${companyName}</p>
@@ -420,4 +434,154 @@ export function buildDomainHealthCheckEmail(params: {
 </html>`;
 
   return { subject: `[${companyName}] ${title}`, html };
+}
+
+export function buildMonthlyClientDigestEmail(params: {
+  companyName: string;
+  logoFullUrl: string;
+  clientName: string;
+  clientEmail: string;
+  activeDomains: Array<{ fqdn: string; expDate: Date; daysLeft: number }>;
+  activeHostings: Array<{ packageName: string; username: string; diskQuotaMb: number | null }>;
+  appUrl: string;
+  basePath: string;
+}): { subject: string; html: string } {
+  const { companyName, logoFullUrl, clientName, clientEmail, activeDomains, activeHostings, appUrl, basePath } = params;
+  const monthName = new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+
+  const domainsRows = activeDomains.length > 0
+    ? activeDomains.map(d => `
+      <tr>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#1e293b;font-weight:600;">${d.fqdn}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">${formatDate(d.expDate)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#2563eb;font-weight:500;">${d.daysLeft > 0 ? `${d.daysLeft} días restantes` : 'Vencido'}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">No tienes dominios activos registrados.</td></tr>';
+
+  const hostingsRows = activeHostings.length > 0
+    ? activeHostings.map(h => {
+        let estTraffic = '15.000 – 30.000 visitas/mes';
+        if (h.packageName.toLowerCase().includes('gold')) estTraffic = '50.000 – 100.000 visitas/mes';
+        if (h.packageName.toLowerCase().includes('platinum')) estTraffic = '100.000 – 250.000 visitas/mes';
+        if (h.packageName.toLowerCase().includes('diamond')) estTraffic = '250.000 – 600.000 visitas/mes';
+        const quota = h.diskQuotaMb ? `${h.diskQuotaMb.toLocaleString()} MB` : 'Ilimitado';
+        return `
+      <tr>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#1e293b;font-weight:600;">${h.packageName} <span style="font-weight:normal;color:#64748b;">(${h.username})</span></td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${quota}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#16a34a;font-weight:600;">${estTraffic}</td>
+      </tr>`;
+      }).join('')
+    : '<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">No tienes planes de alojamiento contratados.</td></tr>';
+
+  const title = `Resumen Mensual de tus Servicios • ${monthName}`;
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${title}</title></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f1f5f9;">
+  <table width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+        
+        <!-- Header -->
+        <tr>
+          <td style="padding:28px 32px;background:#0f172a;color:#ffffff;">
+            ${logoFullUrl ? `<img src="${logoFullUrl}" alt="${companyName}" width="56" height="56" style="display:block;margin-bottom:12px;object-fit:contain;" />` : ''}
+            <h1 style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${title}</h1>
+            <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">Estado de tu infraestructura y servicios digitales</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:28px 32px;">
+            <p style="margin:0 0 16px;font-size:15px;color:#334155;">
+              Hola <strong>${clientName}</strong>, te presentamos el reporte mensual del estado de tus servicios en <strong>${companyName}</strong>.
+            </p>
+
+            <!-- Access Card (Primary Request) -->
+            <div style="background:#eff6ff;border:2px solid #3b82f6;border-radius:10px;padding:20px;margin-bottom:28px;text-align:center;">
+              <h3 style="margin:0 0 8px;font-size:16px;color:#1e3a8a;font-weight:700;">
+                🚀 Accede a tu Panel de Control
+              </h3>
+              <p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#1d4ed8;">
+                Recuerda que puedes gestionar todos tus servicios, consultar consumos de disco, subir comprobantes de pago y crear solicitudes de soporte ingresando al panel:
+              </p>
+              <p style="margin:0 0 16px;font-size:13px;color:#0f172a;">
+                Tu usuario de acceso es tu correo: <strong style="color:#2563eb;background:#ffffff;padding:4px 10px;border-radius:6px;border:1px solid #bfdbfe;">${clientEmail}</strong>
+              </p>
+              <a href="${appUrl}${basePath}/signin" style="display:inline-block;padding:12px 28px;background:#2563eb;color:#ffffff !important;text-decoration:none;font-weight:700;font-size:14px;border-radius:8px;">
+                Ingresar a mi Panel de Control →
+              </a>
+            </div>
+
+            <!-- Dominios -->
+            <h3 style="margin:0 0 10px;font-size:14px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.05em;">Tus Dominios</h3>
+            <table width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:24px;border-collapse:collapse;">
+              <thead>
+                <tr style="background:#f8fafc;color:#64748b;font-size:12px;">
+                  <th style="padding:8px 12px;text-align:left;">Dominio</th>
+                  <th style="padding:8px 12px;text-align:left;">Vencimiento</th>
+                  <th style="padding:8px 12px;text-align:left;">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${domainsRows}
+              </tbody>
+            </table>
+
+            <!-- Hosting -->
+            <h3 style="margin:0 0 10px;font-size:14px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.05em;">Tus Planes de Alojamiento</h3>
+            <table width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:24px;border-collapse:collapse;">
+              <thead>
+                <tr style="background:#f8fafc;color:#64748b;font-size:12px;">
+                  <th style="padding:8px 12px;text-align:left;">Plan / Usuario</th>
+                  <th style="padding:8px 12px;text-align:left;">Cuota Disco</th>
+                  <th style="padding:8px 12px;text-align:left;">Capacidad Tráfico</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${hostingsRows}
+              </tbody>
+            </table>
+
+            <!-- Tips & Metrics -->
+            <div style="background:#f8fafc;border-left:4px solid #10b981;border-radius:0 8px 8px 0;padding:16px;margin-bottom:24px;">
+              <h4 style="margin:0 0 8px;font-size:14px;color:#065f46;font-weight:700;">
+                💡 Consejos para aprovechar al máximo tu servidor:
+              </h4>
+              <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#334155;">
+                <li><strong>Aceleración Web:</strong> Tu servidor cuenta con motor <em>LiteSpeed</em>. Si utilizas WordPress, activa el plugin gratuito <em>LiteSpeed Cache</em> para reducir el tiempo de carga a menos de 1 segundo.</li>
+                <li><strong>Configuración de Correo Corporativo:</strong> Puedes sincronizar tus correos en Outlook o tu smartphone usando <strong>IMAP seguro (puerto 993 con SSL)</strong> y <strong>SMTP saliente (puerto 465 con SSL)</strong>. También puedes acceder vía web en <a href="https://instanceshape.com/webmail" style="color:#2563eb;">Webmail Instance Shape</a>.</li>
+                <li><strong>Seguridad SSL Gratuita:</strong> Todos tus dominios y subdominios cuentan con certificados SSL automáticos activos sin costo adicional.</li>
+              </ul>
+            </div>
+
+            <p style="margin:0;font-size:12px;color:#64748b;text-align:center;">
+              ¿Necesitas asistencia técnica o una cotización de ampliación? Puedes responder a este correo o escribir a nuestro canal de soporte en <a href="${appUrl}${basePath}/soporte" style="color:#2563eb;">Soporte Instance Shape</a>.
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#64748b;">
+            ${companyName} • Notificación mensual para clientes
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+  `;
+
+  return {
+    subject: `[${companyName}] Resumen Mensual de tus Servicios • Gestiona en tu Panel de Control`,
+    html,
+  };
 }

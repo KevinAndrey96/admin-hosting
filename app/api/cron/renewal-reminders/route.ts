@@ -8,6 +8,7 @@ import {
   buildDomainReminderEmail,
   buildHostingReminderEmail,
   buildAdminReminderEmail,
+  buildMonthlyClientDigestEmail,
   type AdminReminderItem,
 } from '@/lib/renewal-reminder-email';
 import { generateAndSendDailyAdminReport } from '@/lib/daily-admin-report';
@@ -22,9 +23,13 @@ import { generateAndSendDailyAdminReport } from '@/lib/daily-admin-report';
  *    - Auditoría de inicios de sesión en el mes: quiénes y cuántas veces han accedido.
  *    - Tips y métricas clave de servidor (tráfico soportado, cuotas de correo, caché).
  * 2. DÍAS 1, 10 Y 20 DE CADA MES: Despacha recordatorios automáticos de cobro a clientes.
+ * 3. DÍA 1 DE CADA MES (o con ?monthly=true): Envía el Resumen Mensual de Servicios a cada cliente,
+ *    recordándole que puede ingresar al panel con su correo como usuario.
  *
  * Parámetros opcionales:
  * - ?force=true: Fuerza el despacho a clientes aunque no sea día 1, 10 o 20.
+ * - ?monthly=true: Fuerza el envío del resumen mensual a clientes.
+ * - ?token=... o ?secret=...: Token de autorización alternativo al header.
  */
 
 export async function GET(request: NextRequest) {
@@ -33,7 +38,8 @@ export async function GET(request: NextRequest) {
     if (cronSecret) {
       const authHeader = request.headers.get('authorization');
       const token = authHeader?.replace(/^Bearer\s+/i, '');
-      if (token !== cronSecret) {
+      const queryToken = request.nextUrl.searchParams.get('token') || request.nextUrl.searchParams.get('secret');
+      if (token !== cronSecret && queryToken !== cronSecret) {
         return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
       }
     }
@@ -70,14 +76,18 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     const dayOfMonth = today.getDate();
     const force = request.nextUrl.searchParams.get('force') === 'true';
+    const isMonthlyParam = request.nextUrl.searchParams.get('monthly') === 'true';
 
-    // 2. DISPATCH A CLIENTES: Exclusivamente los días 1, 10 y 20 de cada mes (o con ?force=true)
-    const isReminderDay = dayOfMonth === 1 || dayOfMonth === 10 || dayOfMonth === 20;
-    if (!isReminderDay && !force) {
+    // 2. DISPATCH A CLIENTES: Recordatorios de vencimiento (días 1, 10, 20 o ?force=true) y Resumen mensual (día 1 o ?monthly=true)
+    const isReminderDay = dayOfMonth === 1 || dayOfMonth === 10 || dayOfMonth === 20 || force;
+    const isMonthlyDay = dayOfMonth === 1 || isMonthlyParam;
+
+    if (!isReminderDay && !isMonthlyDay) {
       return NextResponse.json({
-        message: `Informe diario enviado al administrador (${dailyReport.recipientsCount} admins). Hoy (día ${dayOfMonth}) no corresponde despacho de recordatorios a clientes (días 1, 10 y 20). Usa ?force=true para forzar envío masivo.`,
+        message: `Informe diario enviado al administrador (${dailyReport.recipientsCount} admins). Hoy (día ${dayOfMonth}) no corresponde despacho de recordatorios a clientes ni resumen mensual. Usa ?force=true o ?monthly=true para forzar envíos.`,
         dailyReport,
         clientRemindersSent: 0,
+        monthlyDigestsSent: 0,
         byDay: {},
       });
     }
@@ -87,15 +97,18 @@ export async function GET(request: NextRequest) {
         message: 'Recordatorios desactivados en configuración',
         dailyReport,
         sent: 0,
+        monthlyDigestsSent: 0,
         byDay: {},
       });
     }
 
-    // Domains
-    const domains = await prisma.domain.findMany({
-      where: { paymentStatus: { not: 'CANCELLED' } },
-      include: { user: { select: { fullName: true, email: true } } },
-    });
+    // Ejecución de recordatorios de vencimiento
+    if (isReminderDay) {
+      // Domains
+      const domains = await prisma.domain.findMany({
+        where: { paymentStatus: { not: 'CANCELLED' } },
+        include: { user: { select: { fullName: true, email: true } } },
+      });
 
     for (const d of domains) {
       const expDate = new Date(d.nextBillingDate);
@@ -107,6 +120,7 @@ export async function GET(request: NextRequest) {
         companyName,
         logoFullUrl,
         clientName: d.user.fullName,
+        clientEmail: d.user.email,
         fqdn: d.fqdn,
         expDate,
         daysLeft,
@@ -162,6 +176,7 @@ export async function GET(request: NextRequest) {
         companyName,
         logoFullUrl,
         clientName: h.user.fullName,
+        clientEmail: h.user.email,
         packageName: h.hostingPackage.name,
         username: h.username,
         expDate,
@@ -225,11 +240,63 @@ export async function GET(request: NextRequest) {
         sent++;
       }
     }
+  }
+
+    // 3. RESUMEN MENSUAL A CLIENTES (Día 1 de cada mes o con ?monthly=true)
+    let monthlyDigestsSent = 0;
+
+    if (isMonthlyDay) {
+      const activeClients = await prisma.user.findMany({
+        where: { role: 'CLIENT', status: 'ENABLED' },
+        include: {
+          domains: {
+            where: { status: 'ACTIVE', paymentStatus: { not: 'CANCELLED' } },
+            select: { fqdn: true, nextBillingDate: true },
+          },
+          hosting: {
+            where: { serviceStatus: { not: 'CANCELLED' }, paymentStatus: { not: 'CANCELLED' } },
+            include: { hostingPackage: { select: { name: true, diskSpaceQuotaMb: true } } },
+          },
+        },
+      });
+
+      for (const client of activeClients) {
+        if (!client.email) continue;
+        const activeDomains = client.domains.map((dom) => {
+          const exp = new Date(dom.nextBillingDate);
+          return {
+            fqdn: dom.fqdn,
+            expDate: exp,
+            daysLeft: getDaysUntilExpiration(exp),
+          };
+        });
+        const activeHostings = client.hosting.map((host) => ({
+          packageName: host.hostingPackage.name,
+          username: host.username,
+          diskQuotaMb: host.hostingPackage.diskSpaceQuotaMb,
+        }));
+
+        const { subject, html } = buildMonthlyClientDigestEmail({
+          companyName,
+          logoFullUrl,
+          clientName: client.fullName,
+          clientEmail: client.email,
+          activeDomains,
+          activeHostings,
+          appUrl,
+          basePath,
+        });
+
+        const res = await sendEmail({ to: client.email, subject, html });
+        if (res.ok) monthlyDigestsSent++;
+      }
+    }
 
     return NextResponse.json({
-      message: `Ejecución completada: informe ejecutivo enviado a administradores y ${sent} recordatorios de clientes despachados.`,
+      message: `Ejecución completada: informe ejecutivo enviado a administradores, ${sent} recordatorios de clientes y ${monthlyDigestsSent} resúmenes mensuales despachados.`,
       dailyReport,
       clientRemindersSent: sent,
+      monthlyDigestsSent,
       byDay,
     });
   } catch (error) {
