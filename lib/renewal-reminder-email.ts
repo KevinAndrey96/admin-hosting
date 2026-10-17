@@ -461,16 +461,14 @@ export function buildMonthlyClientDigestEmail(params: {
 
   const hostingsRows = activeHostings.length > 0
     ? activeHostings.map(h => {
-        let estTraffic = '15.000 – 30.000 visitas/mes';
-        if (h.packageName.toLowerCase().includes('gold')) estTraffic = '50.000 – 100.000 visitas/mes';
-        if (h.packageName.toLowerCase().includes('platinum')) estTraffic = '100.000 – 250.000 visitas/mes';
-        if (h.packageName.toLowerCase().includes('diamond')) estTraffic = '250.000 – 600.000 visitas/mes';
         const quota = h.diskQuotaMb ? `${h.diskQuotaMb.toLocaleString()} MB` : 'Ilimitado';
         return `
       <tr>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#1e293b;font-weight:600;">${h.packageName} <span style="font-weight:normal;color:#64748b;">(${h.username})</span></td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${quota}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#16a34a;font-weight:600;">${estTraffic}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#2563eb;">
+          <a href="https://instanceshape.com/webmail" style="color:#2563eb;text-decoration:none;font-weight:600;" target="_blank">Abrir Webmail →</a>
+        </td>
       </tr>`;
       }).join('')
     : '<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">No tienes planes de alojamiento contratados.</td></tr>';
@@ -539,7 +537,7 @@ export function buildMonthlyClientDigestEmail(params: {
                 <tr style="background:#f8fafc;color:#64748b;font-size:12px;">
                   <th style="padding:8px 12px;text-align:left;">Plan / Usuario</th>
                   <th style="padding:8px 12px;text-align:left;">Cuota Disco</th>
-                  <th style="padding:8px 12px;text-align:left;">Capacidad Tráfico</th>
+                  <th style="padding:8px 12px;text-align:left;">Webmail</th>
                 </tr>
               </thead>
               <tbody>
@@ -547,15 +545,21 @@ export function buildMonthlyClientDigestEmail(params: {
               </tbody>
             </table>
 
-            <!-- Tips & Metrics -->
-            <div style="background:#f8fafc;border-left:4px solid #10b981;border-radius:0 8px 8px 0;padding:16px;margin-bottom:24px;">
-              <h4 style="margin:0 0 8px;font-size:14px;color:#065f46;font-weight:700;">
-                💡 Consejos para aprovechar al máximo tu servidor:
+            <!-- Tips & Email Configuration -->
+            <div style="background:#f8fafc;border-left:4px solid #2563eb;border-radius:0 8px 8px 0;padding:16px;margin-bottom:24px;">
+              <h4 style="margin:0 0 8px;font-size:14px;color:#1e3a8a;font-weight:700;">
+                📧 Configuración de Correo Corporativo y Webmail:
               </h4>
               <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#334155;">
-                <li><strong>Aceleración Web:</strong> Tu servidor cuenta con motor <em>LiteSpeed</em>. Si utilizas WordPress, activa el plugin gratuito <em>LiteSpeed Cache</em> para reducir el tiempo de carga a menos de 1 segundo.</li>
-                <li><strong>Configuración de Correo Corporativo:</strong> Puedes sincronizar tus correos en Outlook o tu smartphone usando <strong>IMAP seguro (puerto 993 con SSL)</strong> y <strong>SMTP saliente (puerto 465 con SSL)</strong>. También puedes acceder vía web en <a href="https://instanceshape.com/webmail" style="color:#2563eb;">Webmail Instance Shape</a>.</li>
-                <li><strong>Seguridad SSL Gratuita:</strong> Todos tus dominios y subdominios cuentan con certificados SSL automáticos activos sin costo adicional.</li>
+                <li><strong>Acceso Webmail:</strong> Puedes consultar tu correo en cualquier momento desde tu navegador en <a href="https://instanceshape.com/webmail" style="color:#2563eb;font-weight:600;" target="_blank">instanceshape.com/webmail</a>.</li>
+                <li><strong>Sincronización en Outlook, Gmail o Móvil:</strong>
+                  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;margin-top:6px;font-family:monospace;font-size:12px;color:#1e293b;">
+                    • Servidor de Entrada (IMAP): puerto <strong>993</strong> con SSL/TLS activado<br/>
+                    • Servidor de Salida (SMTP): puerto <strong>465</strong> con SSL/TLS activado<br/>
+                    • Nombre de usuario: Tu dirección de correo completa (ej. contacto@tudominio.com)
+                  </div>
+                </li>
+                <li><strong>Seguridad SSL Automática:</strong> Todos tus dominios y buzones cuentan con certificados de seguridad SSL gratuitos instalados y renovados automáticamente.</li>
               </ul>
             </div>
 

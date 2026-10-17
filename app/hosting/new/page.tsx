@@ -24,6 +24,8 @@ export default function NewHostingPage() {
   const [salePriceOverride, setSalePriceOverride] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('PENDING');
   const [serviceStatus, setServiceStatus] = useState('ENABLED');
+  const [autoProvision, setAutoProvision] = useState(true);
+  const [cpanelPassword, setCpanelPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -123,6 +125,8 @@ export default function NewHostingPage() {
           salePriceOverride: salePriceOverride.trim() === '' ? undefined : salePriceOverride.trim(),
           paymentStatus,
           serviceStatus,
+          autoProvision,
+          cpanelPassword: cpanelPassword.trim() || undefined,
         }),
       });
 
@@ -134,7 +138,7 @@ export default function NewHostingPage() {
       }
 
       setMessage({ type: 'success', text: data.message || 'Hosting creado correctamente.' });
-      setTimeout(() => router.push('/hosting'), 1500);
+      setTimeout(() => router.push('/hosting'), 2000);
     } catch {
       setMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
     } finally {
@@ -259,6 +263,36 @@ export default function NewHostingPage() {
                       required
                       disabled={saving}
                     />
+                </div>
+                <div className="mb-3 p-3 bg-light rounded border">
+                  <div className="form-check form-switch mB-10">
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      id="autoProvision"
+                      checked={autoProvision}
+                      onChange={(e) => setAutoProvision(e.target.checked)}
+                      disabled={saving}
+                    />
+                    <label className="form-check-label fw-600 c-grey-900" htmlFor="autoProvision">
+                      ⚡ Aprovisionar automáticamente en WHM / cPanel ahora
+                    </label>
+                  </div>
+                  {autoProvision && (
+                    <div className="mT-10">
+                      <label htmlFor="cpanelPassword" className="form-label fsz-sm">Contraseña de cPanel (opcional)</label>
+                      <input
+                        type="text"
+                        className="form-control form-control-sm font-monospace"
+                        id="cpanelPassword"
+                        value={cpanelPassword}
+                        onChange={(e) => setCpanelPassword(e.target.value)}
+                        placeholder="Dejar vacío para auto-generar contraseña segura"
+                        disabled={saving}
+                      />
+                      <small className="form-text text-muted">Si se deja en blanco, el sistema generará una contraseña aleatoria de 16 caracteres.</small>
+                    </div>
+                  )}
                 </div>
                 <div className="mb-3">
                   <label htmlFor="nextBillingDate" className="form-label">Próxima facturación</label>

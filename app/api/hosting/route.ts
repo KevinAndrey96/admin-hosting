@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
-import { whmListAccounts } from '@/lib/whm-client';
+import { whmListAccounts, whmCreateAccount, whmChangePackage } from '@/lib/whm-client';
 import { getHostingEffectivePrice, toNumber } from '@/lib/hosting-price';
 
 function requireAdmin(session: { isLoggedIn: boolean; role?: string }) {
@@ -175,6 +175,55 @@ export async function POST(request: NextRequest) {
     const validOverride =
       overrideNum != null && !isNaN(overrideNum) && overrideNum >= 0 ? overrideNum : null;
 
+    const autoProvision = body.autoProvision !== false;
+    let whmPassword = body.cpanelPassword?.trim();
+    let whmProvisioned = false;
+    let whmMessage = '';
+
+    if (autoProvision) {
+      if (!whmPassword) {
+        // Generate secure 16-character password (alphanumeric + symbols)
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+        whmPassword = Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      }
+
+      // Check if account already exists in WHM
+      const whmList = await whmListAccounts();
+      const existingAccount = whmList.ok && whmList.accounts
+        ? Object.values(whmList.accounts).find((a) => a.user.toLowerCase() === usernameNorm.toLowerCase())
+        : null;
+
+      if (!existingAccount) {
+        // Primary domain: first linked domain or subdomain
+        let primaryDomain = usernameNorm + '.instanceshape.com';
+        if (domainIdsArr.length > 0) {
+          const domRecord = await prisma.domain.findUnique({ where: { id: domainIdsArr[0] } });
+          if (domRecord?.fqdn) primaryDomain = domRecord.fqdn.toLowerCase().trim();
+        }
+
+        const createRes = await whmCreateAccount({
+          username: usernameNorm,
+          domain: primaryDomain,
+          password: whmPassword,
+          plan: packageID,
+          contactemail: user.email?.trim() || undefined,
+        });
+
+        if (!createRes.ok) {
+          return NextResponse.json(
+            { error: `Error de aprovisionamiento en WHM: ${createRes.error}` },
+            { status: 502 }
+          );
+        }
+        whmProvisioned = true;
+        whmMessage = `Cuenta cPanel creada en WHM exitosamente (Usuario: ${usernameNorm}, Contraseña generada: ${whmPassword}).`;
+      } else {
+        // Account exists in WHM; synchronize package
+        await whmChangePackage(usernameNorm, packageID);
+        whmMessage = `La cuenta ya existía en WHM; paquete sincronizado a ${pkg.name}.`;
+      }
+    }
+
     const hosting = await prisma.hostingService.create({
       data: {
         userID,
@@ -218,7 +267,9 @@ export async function POST(request: NextRequest) {
         nextBillingDate: hosting.nextBillingDate,
         paymentStatus: hosting.paymentStatus,
         serviceStatus: hosting.serviceStatus,
-        message: 'Hosting creado correctamente.',
+        whmProvisioned,
+        generatedPassword: whmProvisioned ? whmPassword : undefined,
+        message: whmMessage ? `Hosting guardado. ${whmMessage}` : 'Hosting creado correctamente.',
       },
       { status: 201 }
     );

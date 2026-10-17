@@ -332,3 +332,178 @@ export async function whmListAccounts(): Promise<
     req.end();
   });
 }
+
+/**
+ * Generic cPanel UAPI invoker via WHM API 1 (/json-api/cpanel)
+ */
+export async function whmCpanelUapi(
+  cpanelUser: string,
+  module: string,
+  func: string,
+  params: Record<string, string | number | boolean | undefined> = {}
+): Promise<{ ok: boolean; data?: any; error?: string }> {
+  if (!process.env.WHM_API_TOKEN?.trim()) {
+    return { ok: false, error: 'WHM_API_TOKEN no configurado' };
+  }
+
+  const queryParams: Record<string, string> = {
+    'api.version': '1',
+    cpanel_jsonapi_user: cpanelUser.trim().toLowerCase(),
+    cpanel_jsonapi_apiversion: '3',
+    cpanel_jsonapi_module: module,
+    cpanel_jsonapi_func: func,
+  };
+
+  for (const [key, val] of Object.entries(params)) {
+    if (val !== undefined && val !== null) {
+      queryParams[key] = String(val);
+    }
+  }
+
+  const search = new URLSearchParams(queryParams).toString();
+  const path = `/json-api/cpanel?${search}`;
+
+  return new Promise((resolve) => {
+    const opts: https.RequestOptions = {
+      hostname: process.env.WHM_HOST || 'instanceshape.com',
+      port: parseInt(process.env.WHM_PORT || '2087', 10),
+      path,
+      method: 'GET',
+      agent: httpsAgent,
+      timeout: DEFAULT_TIMEOUT_MS,
+      headers: {
+        Authorization: `whm ${process.env.WHM_USER || 'root'}:${process.env.WHM_API_TOKEN}`,
+      },
+    };
+
+    const req = https.request(opts, (res) => {
+      let body = '';
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}');
+          const result = parsed?.result || parsed;
+          const status = result?.status;
+          const errors = result?.errors;
+          const messages = result?.messages;
+
+          let errorMsg = '';
+          if (Array.isArray(errors) && errors.length > 0) {
+            errorMsg = errors.filter(Boolean).join('; ');
+          } else if (typeof errors === 'string') {
+            errorMsg = errors;
+          } else if (status !== 1 && status !== '1') {
+            errorMsg = Array.isArray(messages) ? messages.filter(Boolean).join('; ') : 'Operación cPanel no exitosa';
+          }
+
+          if (res.statusCode === 200 && (status === 1 || status === '1')) {
+            resolve({ ok: true, data: result.data });
+          } else {
+            resolve({ ok: false, error: errorMsg || `HTTP ${res.statusCode}` });
+          }
+        } catch {
+          resolve({ ok: false, error: 'Respuesta inválida de cPanel UAPI' });
+        }
+      });
+    });
+
+    req.on('error', (err) => resolve({ ok: false, error: err.message || 'Error de conexión con WHM' }));
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'Timeout al conectar con cPanel UAPI' }); });
+    req.end();
+  });
+}
+
+export type EmailAccountInfo = {
+  email: string;
+  user: string;
+  domain: string;
+  diskused: string;
+  diskquota: string;
+  diskusedpercent: number;
+  humandiskused: string;
+  humandiskquota: string;
+  suspendedLogin: boolean;
+  suspendedIncoming: boolean;
+};
+
+/**
+ * Lists all email accounts for a cPanel user with disk usage and quotas.
+ */
+export async function whmListEmailAccounts(cpanelUser: string): Promise<{ ok: boolean; accounts?: EmailAccountInfo[]; error?: string }> {
+  const res = await whmCpanelUapi(cpanelUser, 'Email', 'list_pops_with_disk');
+  if (!res.ok) {
+    return { ok: false, error: res.error };
+  }
+
+  const rawList = Array.isArray(res.data) ? res.data : [];
+  const accounts: EmailAccountInfo[] = rawList.map((item: any) => ({
+    email: item.email || `${item.user}@${item.domain}`,
+    user: item.user,
+    domain: item.domain,
+    diskused: item.diskused || '0',
+    diskquota: item.diskquota || 'unlimited',
+    diskusedpercent: Number(item.diskusedpercent) || 0,
+    humandiskused: item.humandiskused || `${item.diskused || 0} MB`,
+    humandiskquota: item.humandiskquota || (item.diskquota === 'unlimited' ? 'Ilimitada' : `${item.diskquota} MB`),
+    suspendedLogin: item.suspended_login === 1 || item.suspended_login === '1',
+    suspendedIncoming: item.suspended_incoming === 1 || item.suspended_incoming === '1',
+  }));
+
+  return { ok: true, accounts };
+}
+
+/**
+ * Creates a new email account in cPanel.
+ */
+export async function whmCreateEmailAccount(
+  cpanelUser: string,
+  params: { email: string; domain: string; password: string; quotaMb?: number }
+): Promise<{ ok: boolean; error?: string }> {
+  return whmCpanelUapi(cpanelUser, 'Email', 'add_pop', {
+    email: params.email.trim().toLowerCase(),
+    domain: params.domain.trim().toLowerCase(),
+    password: params.password,
+    quota: params.quotaMb !== undefined ? params.quotaMb : 1024,
+  });
+}
+
+/**
+ * Changes password for an existing email account in cPanel.
+ */
+export async function whmUpdateEmailPassword(
+  cpanelUser: string,
+  params: { email: string; domain: string; password: string }
+): Promise<{ ok: boolean; error?: string }> {
+  return whmCpanelUapi(cpanelUser, 'Email', 'passwd_pop', {
+    email: params.email.trim().toLowerCase(),
+    domain: params.domain.trim().toLowerCase(),
+    password: params.password,
+  });
+}
+
+/**
+ * Updates disk quota for an existing email account in cPanel.
+ */
+export async function whmUpdateEmailQuota(
+  cpanelUser: string,
+  params: { email: string; domain: string; quotaMb: number }
+): Promise<{ ok: boolean; error?: string }> {
+  return whmCpanelUapi(cpanelUser, 'Email', 'edit_pop_quota', {
+    email: params.email.trim().toLowerCase(),
+    domain: params.domain.trim().toLowerCase(),
+    quota: params.quotaMb,
+  });
+}
+
+/**
+ * Deletes an email account from cPanel.
+ */
+export async function whmDeleteEmailAccount(
+  cpanelUser: string,
+  params: { email: string; domain: string }
+): Promise<{ ok: boolean; error?: string }> {
+  return whmCpanelUapi(cpanelUser, 'Email', 'delete_pop', {
+    email: params.email.trim().toLowerCase(),
+    domain: params.domain.trim().toLowerCase(),
+  });
+}

@@ -374,12 +374,12 @@ export async function generateAndSendDailyAdminReport(params: {
             <!-- Sección 4: Consejos y Métricas de Alto Valor -->
             <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px;margin-bottom:20px;">
               <h3 style="margin:0 0 10px;font-size:15px;color:#1e40af;font-weight:700;">
-                💡 Consejos de Rendimiento y Buenas Prácticas del Servidor
+                💡 Buenas Prácticas y Consejos del Servidor
               </h3>
               <ul style="margin:0;padding-left:20px;font-size:13px;line-height:1.7;color:#1e3a8a;">
-                <li><strong>Estimación de Tráfico Web:</strong> Los planes Bronze y Silver soportan de 15.000 a 30.000 visitas/mes con LiteSpeed Cache activado. Los planes Gold y Platinum manejan de 80.000 a 200.000 visitas/mes sin saturación de I/O.</li>
-                <li><strong>Reputación y Flujo de Correo:</strong> Mantén los límites antispam vigentes (20 correos/h en Bronze/Silver, 60 en Gold/Platinum, 300 en Diamond). Verifica que los clientes usen siempre puertos seguros (SMTPS 465 / STARTTLS 587) y autenticación SPF/DKIM para evitar listas negras.</li>
+                <li><strong>Reputación y Flujo de Correo:</strong> Mantén los límites antispam vigentes (20 correos/h en Bronze/Silver, 60 en Gold/Platinum, 300 en Diamond). Verifica que los clientes usen siempre puertos seguros (SMTPS 465 / IMAP 993) y autenticación SPF/DKIM para evitar listas negras.</li>
                 <li><strong>Protocolo SSH Transitorio:</strong> Si algún cliente requiere importar bases de datos MySQL mayores a 100 MB o scripts WP-CLI/Composer, usa el paquete <code>shape_ssh</code> temporalmente y regrésalo a su plan original al finalizar.</li>
+                <li><strong>Monitoreo y Certificados SSL:</strong> Todos los sitios activos cuentan con AutoSSL; revisa cualquier sitio que presente código HTTP diferente a 200 en la tabla superior.</li>
               </ul>
             </div>
 

@@ -103,6 +103,36 @@ export default function HostingPage() {
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [provisioningId, setProvisioningId] = useState<string | null>(null);
+  const [provisionResult, setProvisionResult] = useState<{ hosting: Hosting; password?: string; message: string } | null>(null);
+
+  const handleQuickProvision = async (hosting: Hosting) => {
+    if (!confirm(`¿Deseas aprovisionar la cuenta cPanel en WHM para ${hosting.username}?`)) return;
+    setProvisioningId(hosting.id);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/hosting/${hosting.id}/provision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Error al aprovisionar servicio en WHM');
+        return;
+      }
+      setProvisionResult({
+        hosting,
+        password: data.password,
+        message: data.message,
+      });
+      fetchHostings();
+    } catch {
+      alert('Error de conexión al conectar con el servidor.');
+    } finally {
+      setProvisioningId(null);
+    }
+  };
 
   const fetchHostings = useCallback(async () => {
     try {
@@ -804,6 +834,13 @@ export default function HostingPage() {
                               >
                                 <i className="ti-email" style={{ fontSize: 18 }} />
                               </button>
+                              <Link
+                                href={`/emails?hostingId=${encodeURIComponent(h.id)}`}
+                                className="btn btn-sm btn-outline-info p-8 m-0"
+                                title="Gestionar correos corporativos"
+                              >
+                                <i className="ti-user" style={{ fontSize: 18 }} />
+                              </Link>
                               {h.salePrice > 0 && (
                                 <Link
                                   href={`/pago?tipo=renovar-hosting&hostingId=${encodeURIComponent(h.id)}`}
@@ -820,6 +857,28 @@ export default function HostingPage() {
                         {user?.role === 'ADMIN' && (
                           <td className="ta-e">
                             <div className="d-f gap-2 jc-e">
+                              <Link
+                                href={`/emails?hostingId=${encodeURIComponent(h.id)}`}
+                                className="btn btn-sm btn-outline-info p-8 m-0"
+                                title="Gestionar correos corporativos"
+                              >
+                                <i className="ti-email" style={{ fontSize: 18 }} />
+                              </Link>
+                              {(!h.diskUsed || h.serviceStatus === 'PENDING') && (
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-warning p-8 m-0"
+                                  onClick={() => handleQuickProvision(h)}
+                                  disabled={provisioningId === h.id}
+                                  title="Aprovisionar cuenta en WHM"
+                                >
+                                  {provisioningId === h.id ? (
+                                    <i className="ti-reload ti-spin" style={{ fontSize: 18 }} />
+                                  ) : (
+                                    <i className="ti-bolt" style={{ fontSize: 18 }} />
+                                  )}
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline-secondary p-8 m-0"
@@ -1209,6 +1268,82 @@ export default function HostingPage() {
                   disabled={deleting}
                 >
                   {deleting ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {provisionResult && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          tabIndex={-1}
+          role="dialog"
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title fw-700">⚡ Aprovisionamiento en WHM Exitoso</h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  aria-label="Cerrar"
+                  onClick={() => setProvisionResult(null)}
+                />
+              </div>
+              <div className="modal-body">
+                <p className="fsz-sm c-grey-800 mB-15">
+                  {provisionResult.message}
+                </p>
+                {provisionResult.password && (
+                  <div className="p-15 bg-light rounded border mB-15">
+                    <label className="form-label fsz-xs fw-700 text-uppercase c-grey-600 mB-5">
+                      Credenciales de Acceso cPanel
+                    </label>
+                    <div className="fsz-sm c-grey-900 mB-5">
+                      <strong>Usuario:</strong> <code>{provisionResult.hosting.username}</code>
+                    </div>
+                    <div className="fsz-sm c-grey-900 mB-10">
+                      <strong>Contraseña:</strong> <code>{provisionResult.password}</code>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`Usuario: ${provisionResult.hosting.username}\nContraseña: ${provisionResult.password}\nURL: https://instanceshape.com/cpanel`);
+                        alert('Credenciales copiadas al portapapeles');
+                      }}
+                    >
+                      Copiar credenciales
+                    </button>
+                  </div>
+                )}
+                <div className="d-f gap-2">
+                  <a
+                    href="https://instanceshape.com/cpanel"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-sm btn-primary"
+                  >
+                    Abrir cPanel →
+                  </a>
+                  <Link
+                    href={`/emails?hostingId=${encodeURIComponent(provisionResult.hosting.id)}`}
+                    className="btn btn-sm btn-outline-info"
+                  >
+                    Configurar Correos →
+                  </Link>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setProvisionResult(null)}
+                >
+                  Cerrar
                 </button>
               </div>
             </div>

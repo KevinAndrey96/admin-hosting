@@ -23,6 +23,7 @@ const PROTECTED_PATHS = [
   '/packages',
   '/settings',
   '/email',
+  '/emails',
   '/compose',
   '/calendar',
   '/charts',

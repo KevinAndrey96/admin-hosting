@@ -132,6 +132,36 @@ Todos los registros fueron auditados y sincronizados en la base de datos de prod
   `RewriteRule ^ http://127.0.0.1:3001%{REQUEST_URI} [P,QSA,L]`
   Esto garantiza que parámetros como `?token=...`, `?force=true` o `?monthly=true` pasen intactos desde el puerto 443 al servidor Node.js local en el puerto 3001.
 
+### 4.9. Módulo Completo de Autoservicio de Correos Corporativos
+- **Interfaz (`/emails`):**
+  - Vista responsiva para clientes y administradores.
+  - Selector de servicios de hosting con estadísticas de buzones usados vs límite del plan y cuota de almacenamiento.
+  - Tabla interactiva con barras de progreso de consumo de disco por casilla.
+  - Modales para creación de nuevas cuentas (con selector de dominio vinculado, generador de claves seguras y selector de cuota), cambio de contraseña, ajuste de cuota y eliminación.
+  - Tarjeta de ayuda con parámetros de configuración para Outlook / Móvil (IMAP 993 SSL, SMTP 465 SSL, Webmail).
+- **Backend y API cPanel UAPI (`/api/emails`):**
+  - Proxy seguro hacia cPanel UAPI vía WHM API 1 (`whmCpanelUapi`):
+    - `Email::list_pops_with_disk` (listar cuentas con uso real y cuotas).
+    - `Email::add_pop` (crear cuenta con validación de límite del paquete).
+    - `Email::passwd_pop` (cambiar contraseña).
+    - `Email::edit_pop_quota` (modificar cuota o asignar ilimitada).
+    - `Email::delete_pop` (eliminar buzón).
+  - Control de acceso por sesión: Clientes solo pueden gestionar buzones de sus propios hostings; administradores tienen gestión global.
+
+### 4.10. Aprovisionamiento Automático en WHM (One-Click Provisioning)
+- **Creación de Hosting (`/hosting/new` y `/api/hosting`):**
+  - Switch de aprovisionamiento inmediato en WHM activo por defecto.
+  - Generación automática de contraseñas de alta seguridad si no se especifica una clave manual.
+  - Creación física de la cuenta en WHM con su paquete correspondiente (`whmCreateAccount`).
+- **Aprovisionamiento 1-Clic para Cuentas Existentes (`/api/hosting/[id]/provision`):**
+  - Botón directo `⚡ Aprovisionar` en la tabla de hosting para servicios en estado `PENDING` o sin aprovisionar.
+  - Modal de confirmación que devuelve las credenciales de acceso listas para copiar y entregar al cliente.
+
+### 4.11. Política de Envíos de Correo Electrónico (Email Dispatch Guardrail)
+- Persistida en `GEMINI.md`:
+  - Queda prohibido el despacho automatizado de correos reales a clientes o administradores mediante SMTP en pruebas o comandos interactivos a menos que el usuario lo solicite expresamente.
+  - El template mensual fue ajustado para remover estimaciones de visitas y tips de caché, enfocándose en accesos directos, Webmail y configuración de correo corporativo.
+
 ---
 
 ## 5. Procedimiento de Despliegue en Producción (Referencia)

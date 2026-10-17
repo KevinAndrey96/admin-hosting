@@ -107,6 +107,14 @@ export default function Sidebar() {
               <span className="title">Hosting</span>
             </Link>
           </li>
+          <li className={`nav-item ${pathname?.startsWith('/emails') ? 'actived' : ''}`}>
+            <Link href="/emails" className="sidebar-link">
+              <span className="icon-holder">
+                <i className="c-teal-500 ti-email" />
+              </span>
+              <span className="title">Correos Corporativos</span>
+            </Link>
+          </li>
           <li className={`nav-item ${pathname === '/profile' ? 'actived' : ''}`}>
             <Link href="/profile" className="sidebar-link">
               <span className="icon-holder">
