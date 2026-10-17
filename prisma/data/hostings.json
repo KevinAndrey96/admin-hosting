@@ -19,7 +19,7 @@
   },
   {
     "userID": "usr_774810724fd1dd34b45c61ee",
-    "packageID": "pkg_platinum",
+    "packageID": "pkg_gold",
     "username": "dualbs",
     "nextBillingDate": "2026-02-13",
     "paymentStatus": "PENDING",
@@ -37,7 +37,7 @@
   },
   {
     "userID": "usr_57614547cad71d590880ba80",
-    "packageID": "pkg_platinum",
+    "packageID": "pkg_gold",
     "username": "instanceshape",
     "nextBillingDate": "2026-02-13",
     "paymentStatus": "PAID",

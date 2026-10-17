@@ -11,7 +11,7 @@ import { prisma } from '@/lib/prisma';
 import { pingDomain } from '@/lib/domain-ping';
 import { getDaysUntilExpiration, formatDate } from '@/lib/renewal-reminder-email';
 import { sendEmail } from '@/lib/email';
-import { getHostingEffectivePrice } from '@/lib/hosting-price';
+import { getHostingEffectivePrice, toNumber } from '@/lib/hosting-price';
 
 export interface DailyReportResult {
   ok: boolean;
@@ -122,14 +122,19 @@ export async function generateAndSendDailyAdminReport(params: {
   for (const h of activeHostings) {
     const days = getDaysUntilExpiration(new Date(h.nextBillingDate));
     if (days <= 30 && days >= -30) {
+      // Regla de Negocio: instanceshape hosting es plan Gold (119.900 COP)
+      const isInstanceShape = h.username === 'instanceshape' || h.username === 'shape';
+      const packageName = isInstanceShape && h.hostingPackage.name === 'Platinum' ? 'Gold' : h.hostingPackage.name;
+      const defaultPackagePrice = isInstanceShape && Number(h.hostingPackage.salePrice) === 499999 ? 119900 : h.hostingPackage.salePrice;
+
       const { salePrice, currency } = getHostingEffectivePrice({
         salePriceOverride: h.salePriceOverride,
-        hostingPackage: h.hostingPackage,
+        hostingPackage: { salePrice: defaultPackagePrice, currency: h.hostingPackage.currency },
       });
       totalToCollect30Days += salePrice;
       upcomingRenewals.push({
         type: 'Hosting',
-        identifier: `${h.hostingPackage.name} (${h.username})`,
+        identifier: `${packageName} (${h.username})`,
         clientName: h.user.fullName,
         amount: salePrice,
         currency,
@@ -142,7 +147,10 @@ export async function generateAndSendDailyAdminReport(params: {
   for (const d of activeDomains) {
     const days = getDaysUntilExpiration(new Date(d.nextBillingDate));
     if (days <= 30 && days >= -30) {
-      const price = Number(d.salePrice) || 49999;
+      const priceNum = toNumber(d.salePrice);
+      // Regla de Negocio: instanceshape.com está incluido en el hosting ($0 COP)
+      const isBundled = d.fqdn.toLowerCase() === 'instanceshape.com' || priceNum === 0;
+      const price = isBundled ? 0 : (priceNum ?? 49999);
       totalToCollect30Days += price;
       upcomingRenewals.push({
         type: 'Dominio',
@@ -233,11 +241,14 @@ export async function generateAndSendDailyAdminReport(params: {
           : r.daysLeft === 0
             ? '<span style="color:#ea580c;font-weight:bold;">Vence hoy</span>'
             : `<span style="color:#2563eb;">${r.daysLeft} días</span>`;
+        const amountDisplay = r.amount === 0
+          ? '<span style="color:#16a34a;font-weight:600;">$0 COP (Incluido con Hosting)</span>'
+          : `$${r.amount.toLocaleString('es-CO')} ${r.currency}`;
         return `
         <tr>
           <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:13px;color:#334155;"><strong>${r.type}</strong>: ${r.identifier}</td>
           <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:13px;color:#334155;">${r.clientName}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:13px;color:#334155;">$${r.amount.toLocaleString('es-CO')} ${r.currency}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:13px;color:#334155;">${amountDisplay}</td>
           <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:13px;">${daysText}</td>
         </tr>`;
       }).join('')

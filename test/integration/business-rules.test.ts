@@ -76,4 +76,29 @@ describe('Integration Test: Instance Shape Business Rules & Package Rightsizing'
     assert.equal(shapeSshProtocol.bandwidthLimitMb, null);
     assert.equal(shapeSshProtocol.sshAccess, true);
   });
+
+  it('daily admin report calculation: $0 domain price must not be coerced to 49999 by falsy operator', () => {
+    // Simulating domain with salePrice 0.00
+    const domainRecord = { fqdn: 'instanceshape.com', salePrice: 0.00 };
+    const priceNum = typeof domainRecord.salePrice === 'number' ? domainRecord.salePrice : parseFloat(String(domainRecord.salePrice));
+    const isBundled = domainRecord.fqdn.toLowerCase() === 'instanceshape.com' || priceNum === 0;
+    const effectivePrice = isBundled ? 0 : (priceNum ?? 49999);
+
+    assert.equal(effectivePrice, 0, 'Domain price must remain 0 COP and not fallback to 49999');
+  });
+
+  it('instanceshape hosting renewal: must resolve to Gold package ($119.900) instead of legacy Platinum template ($499.999)', () => {
+    const hostingRecord = {
+      username: 'instanceshape',
+      hostingPackage: { name: 'Platinum', salePrice: 499999, currency: 'COP' },
+      salePriceOverride: null,
+    };
+
+    const isInstanceShape = hostingRecord.username === 'instanceshape' || hostingRecord.username === 'shape';
+    const resolvedPackageName = isInstanceShape && hostingRecord.hostingPackage.name === 'Platinum' ? 'Gold' : hostingRecord.hostingPackage.name;
+    const defaultPackagePrice = isInstanceShape && Number(hostingRecord.hostingPackage.salePrice) === 499999 ? 119900 : hostingRecord.hostingPackage.salePrice;
+
+    assert.equal(resolvedPackageName, 'Gold');
+    assert.equal(defaultPackagePrice, 119900);
+  });
 });

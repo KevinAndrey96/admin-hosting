@@ -1,8 +1,8 @@
 [
-  {"id":"shape_bronze","name":"Bronze","colorHex":"#CD7F32","salePrice":159900,"currency":"COP","diskSpaceQuotaMb":500,"bandwidthLimitMb":50000,"maxEmailAccounts":5,"maxParkedDomains":1,"maxAddonDomains":0,"includedDomains":1},
-  {"id":"shape_silver","name":"Silver","colorHex":"#C0C0C0","salePrice":199999,"currency":"COP","diskSpaceQuotaMb":1000,"bandwidthLimitMb":100000,"maxEmailAccounts":5,"maxParkedDomains":1,"maxAddonDomains":0,"includedDomains":1},
-  {"id":"shape_gold","name":"Gold","colorHex":"#FFD700","salePrice":289999,"currency":"COP","diskSpaceQuotaMb":2000,"bandwidthLimitMb":200000,"maxEmailAccounts":"unlimited","maxParkedDomains":1,"maxAddonDomains":1,"includedDomains":1},
-  {"id":"shape_platinum","name":"Platinum","colorHex":"#E5E4E2","salePrice":499999,"currency":"COP","diskSpaceQuotaMb":5000,"bandwidthLimitMb":500000,"maxEmailAccounts":"unlimited","maxParkedDomains":1,"maxAddonDomains":2,"includedDomains":1},
-  {"id":"shape_diamond","name":"Diamond","colorHex":"#B9F2FF","salePrice":819999,"currency":"COP","diskSpaceQuotaMb":10000,"bandwidthLimitMb":1000000,"maxEmailAccounts":"unlimited","maxParkedDomains":1,"maxAddonDomains":"unlimited","includedDomains":1},
+  {"id":"shape_bronze","name":"Bronze","colorHex":"#CD7F32","salePrice":39900,"currency":"COP","diskSpaceQuotaMb":500,"bandwidthLimitMb":50000,"maxEmailAccounts":5,"maxParkedDomains":1,"maxAddonDomains":0,"includedDomains":1},
+  {"id":"shape_silver","name":"Silver","colorHex":"#C0C0C0","salePrice":79900,"currency":"COP","diskSpaceQuotaMb":1000,"bandwidthLimitMb":100000,"maxEmailAccounts":5,"maxParkedDomains":1,"maxAddonDomains":0,"includedDomains":1},
+  {"id":"shape_gold","name":"Gold","colorHex":"#FFD700","salePrice":119900,"currency":"COP","diskSpaceQuotaMb":2000,"bandwidthLimitMb":200000,"maxEmailAccounts":"unlimited","maxParkedDomains":1,"maxAddonDomains":1,"includedDomains":1},
+  {"id":"shape_platinum","name":"Platinum","colorHex":"#E5E4E2","salePrice":159900,"currency":"COP","diskSpaceQuotaMb":5000,"bandwidthLimitMb":500000,"maxEmailAccounts":"unlimited","maxParkedDomains":1,"maxAddonDomains":2,"includedDomains":1},
+  {"id":"shape_diamond","name":"Diamond","colorHex":"#B9F2FF","salePrice":299900,"currency":"COP","diskSpaceQuotaMb":10000,"bandwidthLimitMb":1000000,"maxEmailAccounts":"unlimited","maxParkedDomains":1,"maxAddonDomains":"unlimited","includedDomains":1},
   {"id":"shape_ssh","name":"shape_ssh","colorHex":"#10B981","salePrice":0,"currency":"COP","diskSpaceQuotaMb":"unlimited","bandwidthLimitMb":"unlimited","maxEmailAccounts":"unlimited","maxParkedDomains":"unlimited","maxAddonDomains":"unlimited","includedDomains":1}
 ]
