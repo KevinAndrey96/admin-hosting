@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
 import { useSession } from '@/app/hooks/useSession';
+import { useTicketsCount } from '@/app/hooks/useTicketsCount';
 
 // Hide demo options (Go Pro, Email, Compose, etc.) - set to false to show them
 const HIDE_DEMO_ITEMS = true;
@@ -14,6 +15,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { logoUrl, companyName } = useSettings();
   const { user } = useSession();
+  const { openCount: openTicketsCount, urgentCount: urgentTicketsCount } = useTicketsCount();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const hiddenStyle = HIDE_DEMO_ITEMS ? { display: 'none' as const } : undefined;
 
@@ -128,7 +130,23 @@ export default function Sidebar() {
               <span className="icon-holder">
                 <i className="c-green-500 ti-headphone-alt" />
               </span>
-              <span className="title">Soporte</span>
+              <span className="title" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between', width: 'calc(100% - 45px)' }}>
+                <span>Soporte</span>
+                {openTicketsCount > 0 && (
+                  <span
+                    className={`badge rounded-pill ${urgentTicketsCount > 0 ? 'bg-danger' : 'bg-primary'}`}
+                    style={{
+                      fontSize: '10px',
+                      padding: '2px 7px',
+                      fontWeight: 700,
+                      boxShadow: urgentTicketsCount > 0 ? '0 0 8px rgba(220, 53, 69, 0.4)' : undefined,
+                    }}
+                    title={`${openTicketsCount} caso(s) activo(s)`}
+                  >
+                    {openTicketsCount}
+                  </span>
+                )}
+              </span>
             </Link>
           </li>
           {user?.role === 'ADMIN' && (

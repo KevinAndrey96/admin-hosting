@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '../hooks/useTheme';
 import { useSession } from '../hooks/useSession';
+import { useTicketsCount } from '../hooks/useTicketsCount';
 
 type HeaderDropdown = 'user' | null;
 
@@ -13,6 +14,7 @@ export default function Topbar() {
   const router = useRouter();
   const { theme, toggleTheme, mounted } = useTheme();
   const { user } = useSession();
+  const { openCount, urgentCount } = useTicketsCount();
   const [searchActive, setSearchActive] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<HeaderDropdown>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +103,29 @@ export default function Topbar() {
                 </label>
               </div>
             )}
+          </li>
+          <li className="d-flex ai-c mR-15">
+            <Link
+              href="/soporte"
+              className="d-flex ai-c td-n position-relative p-2 c-grey-700 bgcH-grey-100 bdrs-50p"
+              title={openCount > 0 ? `${openCount} ticket(s) de soporte activo(s)` : 'Soporte Técnico'}
+            >
+              <i className="ti-headphone-alt fsz-md" />
+              {openCount > 0 && (
+                <span
+                  className={`position-absolute badge rounded-pill ${urgentCount > 0 ? 'bg-danger' : 'bg-primary'}`}
+                  style={{
+                    top: '2px',
+                    right: '-2px',
+                    fontSize: '9px',
+                    padding: '2px 5px',
+                    fontWeight: 700,
+                  }}
+                >
+                  {openCount}
+                </span>
+              )}
+            </Link>
           </li>
           <li className={`dropdown ${openDropdown === 'user' ? 'show' : ''}`}>
             <a href="#" className="dropdown-toggle no-after peers fxw-nw ai-c lh-1" onClick={toggleHeaderDropdown('user')} role="button" aria-expanded={openDropdown === 'user'}>

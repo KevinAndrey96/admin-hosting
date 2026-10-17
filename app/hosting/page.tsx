@@ -7,6 +7,7 @@ import Link from 'next/link';
 import AdminLayout from '../components/AdminLayout';
 import { useSession } from '../hooks/useSession';
 import dayjs from 'dayjs';
+import { getDiskUsageInfo } from '@/lib/disk-threshold';
 
 type Hosting = {
   id: string;
@@ -177,6 +178,15 @@ export default function HostingPage() {
     }, 5000);
     return () => clearTimeout(t);
   }, [redirectModal]);
+
+  const nearQuotaAccounts = useMemo(() => {
+    return hostings
+      .map((h) => ({
+        ...h,
+        diskInfo: getDiskUsageInfo(h.diskSpaceQuotaMb, h.diskUsed),
+      }))
+      .filter((h) => h.diskInfo.isCritical || h.diskInfo.isWarning);
+  }, [hostings]);
 
   useEffect(() => {
     if (!user || user?.role === 'ADMIN') return;
@@ -610,6 +620,32 @@ export default function HostingPage() {
                 </div>
               </div>
 
+              {nearQuotaAccounts.length > 0 && (
+                <div
+                  className="alert alert-warning border-start border-warning border-4 p-3 mb-3 rounded-3"
+                  role="alert"
+                >
+                  <div className="d-flex align-items-center">
+                    <i className="ti-alert fs-4 text-warning me-3" />
+                    <div className="flex-grow-1">
+                      <strong className="text-dark">
+                        Alerta de Umbral de Almacenamiento ({nearQuotaAccounts.length} cuenta{nearQuotaAccounts.length > 1 ? 's' : ''} al límite):
+                      </strong>
+                      <div className="d-flex flex-wrap gap-2 mt-1">
+                        {nearQuotaAccounts.map((a) => (
+                          <span
+                            key={a.id}
+                            className={`badge ${a.diskInfo.isCritical ? 'bg-danger' : 'bg-warning text-dark'} rounded-pill px-2 py-1 fsz-xs`}
+                          >
+                            <strong>{a.username}</strong> ({a.diskInfo.percentage}% • {Math.round(a.diskInfo.remainingMb || 0)} MB libres)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="table-responsive">
                 <table className="table table-striped table-hover table-bordered">
                   <thead>
@@ -745,8 +781,49 @@ export default function HostingPage() {
                         <td className="c-grey-800 ta-e">
                           {fmtMb(h.diskSpaceQuotaMb ?? null)}
                         </td>
-                        <td className="c-grey-800 ta-e">
-                          {fmtDiskUsed(h.diskUsed)}
+                        <td className="c-grey-800" style={{ minWidth: 140 }}>
+                          {(() => {
+                            const diskInfo = getDiskUsageInfo(h.diskSpaceQuotaMb, h.diskUsed);
+                            if (diskInfo.percentage == null) {
+                              return <span className="ta-e d-block">{fmtDiskUsed(h.diskUsed)}</span>;
+                            }
+                            return (
+                              <div>
+                                <div className="d-flex justify-content-between align-items-center fsz-xs mb-1">
+                                  <span>{fmtDiskUsed(h.diskUsed)}</span>
+                                  <span
+                                    className={`badge rounded-pill ${
+                                      diskInfo.isCritical
+                                        ? 'bg-danger'
+                                        : diskInfo.isWarning
+                                          ? 'bg-warning text-dark'
+                                          : 'bg-light text-muted'
+                                    }`}
+                                    style={{ fontSize: '10px', padding: '1px 6px' }}
+                                  >
+                                    {diskInfo.percentage}%
+                                  </span>
+                                </div>
+                                <div className="progress" style={{ height: '4px', backgroundColor: '#e9ecef', borderRadius: '2px' }}>
+                                  <div
+                                    className={`progress-bar ${
+                                      diskInfo.isCritical
+                                        ? 'bg-danger'
+                                        : diskInfo.isWarning
+                                          ? 'bg-warning'
+                                          : 'bg-success'
+                                    }`}
+                                    style={{ width: `${diskInfo.percentage}%`, borderRadius: '2px' }}
+                                  />
+                                </div>
+                                {diskInfo.isCritical && (
+                                  <div className="text-danger fw-bold mt-1" style={{ fontSize: '10px', textAlign: 'right' }}>
+                                    ⚠️ {Math.round(diskInfo.remainingMb || 0)} MB libres
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="c-grey-800 ta-e">
                           $ {h.salePrice.toLocaleString('es-CO')}
