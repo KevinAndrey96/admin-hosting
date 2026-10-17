@@ -48,6 +48,8 @@ model User {
   domains                   Domain[]
   hosting                   HostingService[]
   loginHistory              LoginHistory[]
+  tickets                   Ticket[]
+  ticketMessages            TicketMessage[]
 
   @@map("users")
 }
@@ -230,4 +232,60 @@ model HostingDomain {
   @@index([hostingID])
   @@index([domainID])
   @@map("hosting_domains")
+}
+
+// -----------------------------------------------------------------------------
+// Support Tickets System
+// -----------------------------------------------------------------------------
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Ticket {
+  id          String         @id @default(cuid())
+  ticketNumber Int           @default(autoincrement()) @unique @map("ticket_number")
+  userID      String         @map("user_id")
+  subject     String
+  status      TicketStatus   @default(OPEN)
+  priority    TicketPriority @default(MEDIUM)
+  category    String?        @default("General") // "Hosting", "Dominio", "Correo", "Facturación", "General"
+  serviceType String?        @map("service_type") // "hosting", "domain", "other"
+  serviceId   String?        @map("service_id")   // ID de servicio relacionado opcional
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  user        User           @relation(fields: [userID], references: [id], onDelete: Cascade)
+  messages    TicketMessage[]
+
+  @@index([userID])
+  @@index([status])
+  @@index([priority])
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketID  String   @map("ticket_id")
+  userID    String   @map("user_id")
+  message   String   @db.Text
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ticket    Ticket   @relation(fields: [ticketID], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userID], references: [id], onDelete: Cascade)
+
+  @@index([ticketID])
+  @@index([userID])
+  @@map("ticket_messages")
 }

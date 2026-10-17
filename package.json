@@ -12,6 +12,7 @@
     "dev": "next dev",
     "build": "npx prisma generate && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "node start-server.js",
+    "test": "node --import tsx --test 'test/**/*.test.ts'",
     "lint": "next lint",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push && npx prisma db seed",

@@ -62,6 +62,24 @@ export async function POST(request: NextRequest) {
     const tipoLabel = SUPPORT_LABELS[tipo] || tipo;
     const mensajeHtml = (message || '(Sin mensaje adicional)').trim().replace(/\n/g, '<br>');
 
+    // Persist ticket in database
+    await prisma.ticket.create({
+      data: {
+        userID: session.userId,
+        subject: `[${tipoLabel}] Solicitud de soporte`,
+        category: tipoLabel,
+        priority: 'MEDIUM',
+        status: 'OPEN',
+        messages: {
+          create: {
+            userID: session.userId,
+            message: (message || 'Solicitud de asistencia técnica inicial').trim(),
+            isAdmin: false,
+          },
+        },
+      },
+    });
+
     const html = `
 <!DOCTYPE html>
 <html>

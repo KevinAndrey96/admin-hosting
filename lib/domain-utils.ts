@@ -5,6 +5,7 @@
 export function isValidFqdn(fqdn: string): boolean {
   if (!fqdn || fqdn.length > 253) return false;
   if (/[:/\\]/.test(fqdn)) return false;
+  if (fqdn.includes('..')) return false;
   return /^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/.test(fqdn);
 }
 

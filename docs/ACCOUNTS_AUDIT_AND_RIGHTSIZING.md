@@ -1,6 +1,7 @@
 # Auditoría de Cuentas cPanel y Estrategia de Optimización (Right-Sizing)
 *Instance Shape Cloud Hosting - Informe Técnico y Operativo*  
-*Fecha de Auditoría: Octubre 2026*
+*Fecha de Auditoría: Octubre 2026*  
+*Versión:* 2.1.0
 
 ---
 
@@ -11,62 +12,60 @@ A continuación se detalla el estado auditado directamente desde la API de cPane
 | Usuario cPanel | Dominio Principal | Cliente Asignado | Plan Asignado | Cuota Actual | Disco Usado | % Uso | Cuentas Correo | Dominios Addon | Diagnóstico |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | **`frutyexpres`** | `frutyexpres.com` | Jhonathan Perea | **Bronze** | 500 MB | 1 MB | 0.2% | 0 | 0 | ✅ Óptimo / Plan Base |
-| **`mundialdesillas`**| `mundialdesillas.com` | Dickson Herrera | **Gold** | 2.000 MB | 11 MB | 0.5% | 0 | 0 | 🔽 **Sobredimensionado** |
-| **`mrchorro`** | `mrchorro.app` | Kevin Andrey H. | **Gold** | 2.000 MB | 28 MB | 1.4% | 2 | 0 | 🔽 **Sobredimensionado** |
-| **`mejorseguridad`** | `tumejorseguridad.com` | Dickson Herrera | **Silver** | 1.000 MB | 91 MB | 9.1% | 1 | 0 | 🔽 **Sobredimensionado** |
-| **`theagadvantagegr`**| `theagadvantagegroup.com`| Edwin | **Gold** | 2.000 MB | 291 MB | 14.5% | 1 | 0 | 🔽 **Sobredimensionado** |
-| **`garixcom`** | `garix.com.co` | Juan Carlos | **Gold** | 2.000 MB | 335 MB | 16.8% | 0 | 0 | 🔽 **Sobredimensionado** |
-| **`nmpsicologia`** | `nmpsicologiaenevolucion.com` | Kevin Andrey H. | **Gold** | 2.000 MB | 770 MB | 38.5% | 3 | 0 | ✅ Congruente |
-| **`highsolutions`** | `highsolutionssas.com` | César Sánchez | **Gold** | 2.000 MB | 801 MB | 40.1% | 1 | 0 | ✅ Congruente |
-| **`tamales`** | `tamalestolimenseseduard.com`| Dickson Herrera | **Gold** | 2.000 MB | 808 MB | 40.4% | 2 | 0 | ✅ Congruente |
-| **`ansftranslations`**| `ansftranslations.com` | Roberto Forero | **Gold** | 2.000 MB | 963 MB | 48.1% | 1 | 0 | ✅ Congruente / Vigilar |
-| **`dualbs`** | `dualbs.com` | Dickson Herrera | **Platinum** | 5.000 MB | 1.840 MB | 36.8% | 0 | 0 | ✅ Congruente |
-| **`shape`** | `instanceshape.com` | Kevin Andrey H. | **Platinum** | 5.000 MB | 1.866 MB | 37.3% | 2 | 0 | ✅ Congruente |
+| **`mundialdesillas`**| `mundialdesillas.com` | Dickson Herrera | **Bronze** | 500 MB | 11 MB | 2.2% | 0 | 0 | ✅ Optimizado a Bronze |
+| **`mrchorro`** | `mrchorro.app` | Kevin Andrey H. | **Bronze** | 500 MB | 28 MB | 5.6% | 2 | 0 | ✅ Optimizado a Bronze |
+| **`mejorseguridad`** | `tumejorseguridad.com` | Dickson Herrera | **Bronze** | 500 MB | 91 MB | 18.2% | 1 | 0 | ✅ Optimizado a Bronze |
+| **`theagadvantagegr`**| `theagadvantagegroup.com`| Edwin | **Silver** | 1.000 MB | 291 MB | 29.1% | 1 | 0 | ✅ Dominio Principal Activo |
+| **`garixcom`** | `garix.com.co` | Juan Carlos | **Silver** | 1.000 MB | 335 MB | 33.5% | 0 | 0 | ✅ Optimizado a Silver |
+| **`dualbs`** | `dualbs.com` | Dickson Herrera | **Gold** | 2.000 MB | 1.840 MB | 92.0% | 0 | 0 | ⚠️ **Reducido a Shape Gold** |
+| **`nmpsicologia`** | `nmpsicologiaenevolucion.com` | Kevin Andrey H. | **Gold** | 2.000 MB | 770 MB | 38.5% | 3 | 0 | ✅ Congruente en Gold |
+| **`highsolutions`** | `highsolutionssas.com` | César Sánchez | **Gold** | 2.000 MB | 801 MB | 40.1% | 1 | 0 | ✅ Congruente en Gold |
+| **`tamales`** | `tamalestolimenseseduard.com`| Dickson Herrera | **Gold** | 2.000 MB | 808 MB | 40.4% | 2 | 0 | ✅ Congruente en Gold |
+| **`ansftranslations`**| `ansftranslations.com` | Roberto Forero | **Gold** | 2.000 MB | 963 MB | 48.1% | 1 | 0 | ✅ Congruente en Gold |
+| **`shape`** | `instanceshape.com` | Kevin Andrey H. | **Platinum** | 5.000 MB | 1.866 MB | 37.3% | 2 | 0 | ✅ Dominio $0 (Incluido en Hosting) |
 
 ---
 
-## 2. Análisis de Congruencia Operativa
+## 2. Ajustes Especiales y Resoluciones de Negocio
 
-1. **Ausencia de Sobregiros:** Ninguna cuenta supera su cuota asignada. El promedio de uso general de la plataforma se mantiene en un saludable **24.5%**.
-2. **Límites de Correo:** Ninguna cuenta activa supera los 3 buzones de correo creados. Los planes **Bronze** y **Silver** (que permiten hasta 5 cuentas de correo) cubren con holgura las necesidades de la mayoría de clientes.
-3. **Dominios Addon:** Ninguna cuenta actual tiene configurados dominios adicionales en cPanel (`addonCount = 0`).
+### 2.1. Downgrade Formal de `dualbs` a Paquete Gold (`shape_gold`)
+- **Instrucción de Dirección:** Se solicitó expresamente la reducción del paquete de `dualbs` desde *Platinum* hacia *Gold*.
+- **Plan Asignado:** `shape_gold` (2.000 MB de disco, 200 GB de ancho de banda, 1 dominio adicional permitido, casillas de correo ilimitadas).
+- **Impacto Operativo:**
+  - Consumo actual: **1.840 MB**.
+  - Ocupación bajo Gold: **92.0%**.
+  - Margen de maniobra disponible: **160 MB libres**.
+- **Acciones Realizadas:**
+  - Actualización directa en la tabla `hostings`: `package_id = 'shape_gold'`.
+  - Vinculación explícita en `hosting_domains` con el dominio `dualbs.com` (id `cmlmoq18c000hcfi0bnh90loo`).
+  - Registro de alerta para monitorear periódicamente que el consumo no exceda los 2.000 MB para prevenir rebote de correos.
+
+### 2.2. Regla de Inclusión de Dominio en Hosting (`instanceshape.com` a $0 COP)
+- **Instrucción de Dirección:** En el caso de `instanceshape.com`, dominio y hosting van en el mismo paquete; por lo tanto, el dominio tiene un valor de **$0 COP** porque el hosting incluye el dominio.
+- **Acciones Realizadas:**
+  - Actualización en base de datos: `UPDATE domains SET sale_price = 0.00, with_hosting = 1 WHERE fqdn = 'instanceshape.com'`.
+  - Vinculación en `hosting_domains` entre el servicio de hosting `instanceshape` y el dominio `instanceshape.com`.
+  - En los informes ejecutivos y paneles de renovación, el costo del dominio se liquida a $0 COP.
+
+### 2.3. Consolidación de Dominio: `theagadvantagegroup.com`
+- **Instrucción de Dirección:** `agadvantagegroup.com` ahora es `theagadvantagegroup.com`. Todas las fechas de renovación y estados priman sobre el nuevo dominio.
+- **Acciones Realizadas:**
+  - `theagadvantagegroup.com` confirmado como **Dominio Principal Activo** con registrador **Spaceship, Inc.** y vencimiento oficial **02/10/2027**.
+  - El hosting `theagadvantagegr` fue actualizado con `next_billing_date = '2027-10-02 22:03:47'`.
+  - El dominio antiguo `agadvantagegroup.com` fue marcado como `REJECTED` / `CANCELLED` en la base de datos para prevenir duplicidad de cobros o conflictos de recordatorios.
 
 ---
 
-## 3. Matriz de Reducción de Planes (Right-Sizing)
+## 3. Matriz Consolidada de Paquetes Instance Shape
 
-Se identificaron **5 cuentas** que pagan o tienen asignados paquetes superiores a su consumo real, con la siguiente propuesta de ajuste:
-
-| Cuenta cPanel | Dominio | Plan Actual | Plan Sugerido | Espacio Libre Resultante | Justificación Técnica |
-| :--- | :--- | :---: | :---: | :---: | :--- |
-| **`mundialdesillas`** | `mundialdesillas.com` | **Gold** ($289.999) | ➔ **Bronze** ($159.900) | **489 MB libres (97.8%)** | Consume solo 11 MB y no tiene correos creados. |
-| **`mrchorro`** | `mrchorro.app` | **Gold** ($289.999) | ➔ **Bronze** ($159.900) | **472 MB libres (94.4%)** | Consume 28 MB y 2 correos (el plan Bronze permite 5). |
-| **`mejorseguridad`** | `tumejorseguridad.com` | **Silver** ($199.999) | ➔ **Bronze** ($159.900) | **409 MB libres (81.8%)** | Consume 91 MB y 1 correo. Muy seguro en 500 MB. |
-| **`theagadvantagegr`** | `theagadvantagegroup.com` | **Gold** ($289.999) | ➔ **Silver** ($199.999) | **709 MB libres (70.9%)** | Consume 291 MB y 1 correo. Queda con ~30% de uso en 1 GB. |
-| **`garixcom`** | `garix.com.co` | **Gold** ($289.999) | ➔ **Silver** ($199.999) | **665 MB libres (66.5%)** | Consume 335 MB y 0 correos. Queda con ~33% de uso en 1 GB. |
-
----
-
-## 4. Cuentas que NO Deben Reducirse
-
-- **`instanceshape`** (1.866 MB) y **`dualbs`** (1.840 MB):
-  - *Motivo:* Si bajaran a Gold (2.000 MB), operarían al **93.3%** y **92.0%** de su capacidad, lo cual bloquearía la entrada de nuevos correos o backups. Deben permanecer en **Platinum (5.000 MB)**.
-- **`ansftranslations`** (963 MB), **`tamales`** (808 MB), **`highsolutions`** (801 MB) y **`nmpsicologia`** (770 MB):
-  - *Motivo:* En Silver (1.000 MB) operarían entre el **77% y el 96.3%** de ocupación. Deben permanecer en **Gold (2.000 MB)** para garantizar estabilidad operativa.
+| Identificador WHM | Nombre Comercial | Disco (MB) | Ancho de Banda (GB) | Cuentas Correo | Dominios Addon | Antispam (emails/h) | Tarifa Anual (COP) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `shape_bronze` | **Shape Bronze** | 500 MB | 50 GB | 5 | 0 | 20 | **$39.900** |
+| `shape_silver` | **Shape Silver** | 1.000 MB | 100 GB | 5 | 0 | 20 | **$79.900** |
+| `shape_gold` | **Shape Gold** | 2.000 MB | 200 GB | Ilimitadas | 1 | 60 | **$119.900** |
+| `shape_platinum` | **Shape Platinum** | 5.000 MB | 500 GB | Ilimitadas | 2 | 60 | **$159.900** |
+| `shape_diamond` | **Shape Diamond** | 10.000 MB | 1.000 GB | Ilimitadas | Ilimitados | 300 | **$299.900** |
+| `shape_ssh` | **Shape SSH (Transitorio)** | Ilimitado | Ilimitado | Ilimitadas | Ilimitados | 300 | Exclusivo Interno |
 
 ---
-
-## 5. Procedimiento de Aplicación
-
-Para aplicar una reducción de paquete:
-1. **En Panel Admin:**
-   - Ir a `/hosting/[id]/edit`.
-   - Seleccionar el nuevo paquete (`Bronze` o `Silver`).
-   - Guardar cambios.
-2. **En Servidor cPanel / WHM:**
-   - La API de WHM aplica la nueva cuota mediante:
-     ```bash
-     curl -s -H "Authorization: whm shape:$TOKEN" \
-       "https://46.224.80.244:2087/json-api/changepackage?api.version=1&user=$USER&pkg=$PLAN"
-     ```
-   - cPanel ajusta automáticamente los límites de disco, cuotas de correo y ancho de banda sin interrupción de servicio para el sitio web.
+*Instance Shape SAS • Auditoría y Optimización de Infraestructura*
