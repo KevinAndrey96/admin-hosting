@@ -91,7 +91,7 @@ export default function TransferInPage() {
       }
     };
     if (user) fetchData();
-  }, [user?.id, user?.role, isAdmin]);
+  }, [user, isAdmin]);
 
   useEffect(() => {
     if (isAdmin && userID && clients.length) {
