@@ -128,6 +128,22 @@ Todos los registros fueron auditados y sincronizados en la base de datos de prod
   - Queda estrictamente prohibido el despacho automatizado de correos reales a clientes o administradores mediante SMTP en pruebas o comandos interactivos a menos que el usuario lo solicite de manera textual y explícita.
   - Los scripts y crons en modo de prueba deben emplear la bandera `dryRun=true` o mocks de transporte.
 
+### 4.7. Sistema de Badges Reactivos de Soporte en Tiempo Real
+- **Endpoint Especializado (`/api/tickets/count`):**
+  - Consulta atómica que contabiliza tickets activos en estado `OPEN` o `IN_PROGRESS` (con filtro de urgencia para tickets `HIGH` o `URGENT`).
+  - Filtrado según sesión: para administradores contabiliza todos los tickets globales del sistema; para clientes contabiliza sus casos abiertos.
+- **Hook Reactivo (`app/hooks/useTicketsCount.ts`):**
+  - Mantiene el estado sincronizado en `Sidebar.tsx` y `Topbar.tsx`.
+  - Sondeo suave cada 30 segundos y escucha reactiva del evento nativo `tickets:updated` para actualización instantánea.
+
+### 4.8. Monitor de Umbral de Almacenamiento y Alerta Visual de Capacidad
+- **Módulo de Cálculo (`lib/disk-threshold.ts`):**
+  - Normaliza consumos devueltos por cPanel UAPI (`MB`, `GB`, `KB`) frente a la cuota del paquete de hosting.
+  - Establece umbrales inteligentes: **Alerta (≥ 80%)** y **Crítico (≥ 90%)**.
+- **Visualización en Panel de Hosting (`/hosting`):**
+  - **Banner Superior de Advertencia:** Identifica de inmediato cuentas sobre el 80% (por ejemplo, `dualbs` al 90% con 1.803 MB sobre 2.000 MB tras su downgrade a Gold) indicando megabytes restantes para prevenir rebote de correos o bloqueos de base de datos.
+  - **Barras de Progreso Interactivas:** Barra codificada por color (verde/ámbar/rojo) y badge porcentual por cada cuenta.
+
 ---
 
 ## 5. Procedimiento de Despliegue en Producción (Zero-Downtime)
