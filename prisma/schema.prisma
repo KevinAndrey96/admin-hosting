@@ -41,6 +41,7 @@ model User {
   password      String
   role        UserRole   @default(CLIENT)
   status      UserStatus @default(ENABLED)
+  isAgencyPartner Boolean @default(false) @map("is_agency_partner")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
@@ -207,6 +208,8 @@ model HostingService {
   serviceStatus     HostingServiceStatus @default(ENABLED) @map("service_status")
   salePriceOverride Decimal?            @map("sale_price_override") @db.Decimal(10, 2) // null = inherit from package
   paymentProofPath  String?             @map("payment_proof_path")
+  isPrimaryAgency   Boolean             @default(false) @map("is_primary_agency")
+  referredByHostingID String?           @map("referred_by_hosting_id")
   createdAt         DateTime            @default(now()) @map("created_at")
   updatedAt         DateTime            @updatedAt @map("updated_at")
 

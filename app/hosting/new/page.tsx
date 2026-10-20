@@ -26,6 +26,9 @@ export default function NewHostingPage() {
   const [serviceStatus, setServiceStatus] = useState('ENABLED');
   const [autoProvision, setAutoProvision] = useState(true);
   const [cpanelPassword, setCpanelPassword] = useState('');
+  const [isReferral, setIsReferral] = useState(false);
+  const [referredByHostingID, setReferredByHostingID] = useState('');
+  const [agencyHostings, setAgencyHostings] = useState<Array<{ id: string; username: string; clientName: string; packageName: string; isPrimaryAgency?: boolean }>>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -68,6 +71,26 @@ export default function NewHostingPage() {
       }
     };
     if (user?.role === 'ADMIN') fetchPackages();
+  }, [user?.role]);
+
+  useEffect(() => {
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    const fetchAgencyHostings = async () => {
+      try {
+        const res = await fetch(`${basePath}/api/hosting`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          const primaryOrAgency = data.filter((h: any) => h.isPrimaryAgency || h.username === 'dualmkt');
+          setAgencyHostings(primaryOrAgency.length > 0 ? primaryOrAgency : data);
+          if (primaryOrAgency.length > 0) {
+            setReferredByHostingID(primaryOrAgency[0].id);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    if (user?.role === 'ADMIN') fetchAgencyHostings();
   }, [user?.role]);
 
   useEffect(() => {
@@ -127,6 +150,7 @@ export default function NewHostingPage() {
           serviceStatus,
           autoProvision,
           cpanelPassword: cpanelPassword.trim() || undefined,
+          referredByHostingID: isReferral && referredByHostingID ? referredByHostingID : undefined,
         }),
       });
 
@@ -291,6 +315,46 @@ export default function NewHostingPage() {
                         disabled={saving}
                       />
                       <small className="form-text text-muted">Si se deja en blanco, el sistema generará una contraseña aleatoria de 16 caracteres.</small>
+                    </div>
+                  )}
+                </div>
+                <div className="mb-3 p-3 bg-light rounded border">
+                  <div className="form-check form-switch mB-10">
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      id="isReferral"
+                      checked={isReferral}
+                      onChange={(e) => setIsReferral(e.target.checked)}
+                      disabled={saving}
+                    />
+                    <label className="form-check-label fw-600 c-grey-900" htmlFor="isReferral">
+                      🎁 Asignar como servicio referido por agencia
+                    </label>
+                  </div>
+                  {isReferral && (
+                    <div className="mT-10">
+                      <label htmlFor="referredByHostingID" className="form-label fsz-sm fw-500">
+                        Cuenta de agencia beneficiaria (+2 meses de bonificación) *
+                      </label>
+                      <select
+                        className="form-select form-select-sm"
+                        id="referredByHostingID"
+                        value={referredByHostingID}
+                        onChange={(e) => setReferredByHostingID(e.target.value)}
+                        disabled={saving}
+                        required={isReferral}
+                      >
+                        <option value="">-- Seleccionar cuenta de agencia --</option>
+                        {agencyHostings.map((ah) => (
+                          <option key={ah.id} value={ah.id}>
+                            {ah.username} ({ah.clientName} - {ah.packageName})
+                          </option>
+                        ))}
+                      </select>
+                      <small className="form-text text-muted d-block mT-5">
+                        Al crear este nuevo hosting, la cuenta de agencia seleccionada recibirá automáticamente +2 meses (60 días) adicionales en su fecha de vencimiento.
+                      </small>
                     </div>
                   )}
                 </div>

@@ -29,6 +29,8 @@ type Hosting = {
   paymentStatus: string;
   serviceStatus: string;
   paymentProofPath?: string | null;
+  isPrimaryAgency?: boolean;
+  referredByHostingID?: string | null;
 };
 
 type Package = {
@@ -736,7 +738,14 @@ export default function HostingPage() {
                   </thead>
                   <tbody>
                     {paginatedData.map((h) => (
-                      <tr key={h.id}>
+                      <tr
+                        key={h.id}
+                        style={
+                          h.isPrimaryAgency
+                            ? { backgroundColor: 'rgba(245, 158, 11, 0.07)', borderLeft: '3px solid #f59e0b' }
+                            : undefined
+                        }
+                      >
                         {user?.role === 'ADMIN' && (
                           <td className="c-grey-800">
                             <Link href={`/clients/${h.userID}/edit`} className="td-n c-grey-800">
@@ -756,7 +765,37 @@ export default function HostingPage() {
                             {h.packageName}
                           </span>
                         </td>
-                        <td className="fw-500 c-grey-900">{h.username}</td>
+                        <td className="fw-500 c-grey-900">
+                          {h.username}
+                          {h.isPrimaryAgency && (
+                            <span
+                              className="badge ms-2"
+                              style={{
+                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                color: '#000',
+                                fontWeight: 600,
+                                fontSize: '0.72rem',
+                                padding: '3px 8px',
+                                borderRadius: '12px',
+                              }}
+                            >
+                              ⭐ Matriz Agencia
+                            </span>
+                          )}
+                          {h.referredByHostingID && (
+                            <span
+                              className="badge ms-2 bg-info text-dark"
+                              style={{
+                                fontWeight: 600,
+                                fontSize: '0.72rem',
+                                padding: '3px 8px',
+                                borderRadius: '12px',
+                              }}
+                            >
+                              🎁 Referido (+2m)
+                            </span>
+                          )}
+                        </td>
                         <td className="c-grey-800">
                           {h.domainFqdns?.length ? (
                             <>

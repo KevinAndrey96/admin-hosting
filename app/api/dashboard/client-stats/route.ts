@@ -27,6 +27,7 @@ export async function GET() {
       activeDomains,
       hostingsExpiring30Days,
       domainsExpiring30Days,
+      currentUser,
     ] = await Promise.all([
       prisma.hostingService.count({
         where: {
@@ -56,13 +57,51 @@ export async function GET() {
           nextBillingDate: { gte: now, lte: in30Days },
         },
       }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, isAgencyPartner: true },
+      }),
     ]);
+
+    let agencyPromotion = null;
+    if (currentUser?.isAgencyPartner) {
+      const primaryHosting = await prisma.hostingService.findFirst({
+        where: {
+          userID: userId,
+          isPrimaryAgency: true,
+        },
+        include: {
+          domains: { include: { domain: { select: { fqdn: true } } } },
+        },
+      });
+
+      const referralsCount = primaryHosting
+        ? await prisma.hostingService.count({
+            where: { referredByHostingID: primaryHosting.id },
+          })
+        : 0;
+
+      agencyPromotion = {
+        active: true,
+        primaryHosting: primaryHosting
+          ? {
+              id: primaryHosting.id,
+              username: primaryHosting.username,
+              nextBillingDate: primaryHosting.nextBillingDate,
+              primaryDomain: primaryHosting.domains[0]?.domain.fqdn || `${primaryHosting.username}.com`,
+            }
+          : null,
+        referralsCount,
+        bonusMonthsEarned: referralsCount * 2,
+      };
+    }
 
     return NextResponse.json({
       activeHostings,
       activeDomains,
       hostingsExpiring30Days,
       domainsExpiring30Days,
+      agencyPromotion,
     });
   } catch (error) {
     console.error('Client dashboard stats error:', error);

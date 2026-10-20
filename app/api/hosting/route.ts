@@ -73,6 +73,8 @@ export async function GET(request: NextRequest) {
         paymentStatus: h.paymentStatus,
         serviceStatus: String(h.serviceStatus),
         paymentProofPath: h.paymentProofPath,
+        isPrimaryAgency: Boolean(h.isPrimaryAgency),
+        referredByHostingID: h.referredByHostingID ?? null,
         createdAt: h.createdAt,
       };
     });
@@ -108,7 +110,29 @@ export async function POST(request: NextRequest) {
       paymentStatus,
       serviceStatus,
       salePriceOverride,
+      referredByHostingID: rawRefId,
+      isPrimaryAgency: rawPrimary,
     } = body;
+
+    const referredByHostingID = rawRefId?.trim() || null;
+    const isPrimaryAgency = Boolean(rawPrimary);
+
+    let referralBonusMessage = '';
+    if (referredByHostingID) {
+      const agencyHosting = await prisma.hostingService.findUnique({
+        where: { id: referredByHostingID },
+      });
+      if (agencyHosting) {
+        // Extend agency hosting billing by 60 days (2 months)
+        const currentBilling = new Date(agencyHosting.nextBillingDate);
+        const newBilling = new Date(currentBilling.getTime() + 60 * 24 * 60 * 60 * 1000);
+        await prisma.hostingService.update({
+          where: { id: agencyHosting.id },
+          data: { nextBillingDate: newBilling },
+        });
+        referralBonusMessage = ` Bonificación por referido: +2 meses otorgados a ${agencyHosting.username} (nuevo vencimiento: ${newBilling.toLocaleDateString('es-CO')}).`;
+      }
+    }
 
     if (!userID?.trim()) {
       return NextResponse.json(
@@ -240,6 +264,8 @@ export async function POST(request: NextRequest) {
           ? serviceStatus
           : 'ENABLED',
         salePriceOverride: validOverride,
+        isPrimaryAgency,
+        referredByHostingID,
       },
       include: {
         user: { select: { fullName: true, email: true } },
@@ -269,7 +295,9 @@ export async function POST(request: NextRequest) {
         serviceStatus: hosting.serviceStatus,
         whmProvisioned,
         generatedPassword: whmProvisioned ? whmPassword : undefined,
-        message: whmMessage ? `Hosting guardado. ${whmMessage}` : 'Hosting creado correctamente.',
+        message: whmMessage
+          ? `Hosting guardado. ${whmMessage}${referralBonusMessage}`
+          : `Hosting creado correctamente.${referralBonusMessage}`,
       },
       { status: 201 }
     );
