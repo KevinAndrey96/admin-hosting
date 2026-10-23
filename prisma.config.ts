@@ -8,6 +8,6 @@ export default defineConfig({
     seed: 'npm run db:seed',
   },
   datasource: {
-    url: process.env.DATABASE_URL || 'mysql://shape_hosting:Hosting2026@127.0.0.1:3306/shape_hosting',
+    url: process.env.DATABASE_URL || 'mysql://user:password@127.0.0.1:3306/app',
   },
 });
