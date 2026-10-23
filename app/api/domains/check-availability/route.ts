@@ -15,13 +15,7 @@ function isValidFqdn(fqdn: string): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const session = await getSession(cookieStore);
-
-    if (!requireAuth(session)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-    }
-
+    // Note: Publicly accessible so visitors on the main website can verify domain availability.
     const { searchParams } = new URL(request.url);
     const domain = searchParams.get('domain')?.trim().toLowerCase();
 

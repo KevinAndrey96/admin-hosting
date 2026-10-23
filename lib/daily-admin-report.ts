@@ -1,5 +1,5 @@
 /**
- * Generador y despachador del Informe Ejecutivo Diario para Administradores de Instance Shape.
+ * Generador y despachador del Informe Ejecutivo Diario para Administradores de Azulática.
  * Incluye:
  * 1. Health check HTTP de todos los sitios con alerta prioritaria si alguno está caído.
  * 2. Métricas de valores a recaudar y renovaciones en los próximos 30 días.

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import BrandLogo from '@/app/components/BrandLogo';
 import { usePathname } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
 import { useSession } from '@/app/hooks/useSession';
@@ -13,7 +13,7 @@ const HIDE_DEMO_ITEMS = true;
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { logoUrl, companyName } = useSettings();
+  const { settings, companyName } = useSettings();
   const { user } = useSession();
   const { openCount: openTicketsCount, urgentCount: urgentTicketsCount } = useTicketsCount();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -49,13 +49,12 @@ export default function Sidebar() {
             <div className="peer peer-greed">
               <Link href="/dashboard" className="sidebar-link td-n">
                 <div className="logo">
-                  <Image
-                    src={logoUrl}
+                  <BrandLogo
+                    src={settings?.logo_url}
                     alt={companyName}
                     width={42}
                     height={42}
                     style={{ display: 'block', margin: '11px auto' }}
-                    unoptimized
                   />
                 </div>
               </Link>

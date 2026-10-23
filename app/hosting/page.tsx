@@ -100,7 +100,12 @@ export default function HostingPage() {
   const [requiresMigrationHelp, setRequiresMigrationHelp] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [contractSubmitting, setContractSubmitting] = useState(false);
-  const [redirectModal, setRedirectModal] = useState<{ hosting: Hosting; url: string; title: string } | null>(null);
+  const [redirectModal, setRedirectModal] = useState<{
+    hosting: Hosting;
+    service: 'cpanel' | 'webmail';
+    title: string;
+  } | null>(null);
+  const [redirectError, setRedirectError] = useState<string | null>(null);
   const [renewModal, setRenewModal] = useState<Hosting | null>(null);
   const [renewing, setRenewing] = useState(false);
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
@@ -173,12 +178,51 @@ export default function HostingPage() {
   }, [user, fetchHostings]);
 
   useEffect(() => {
-    if (!redirectModal) return;
-    const t = setTimeout(() => {
-      window.open(redirectModal.url, '_blank');
-      setRedirectModal(null);
-    }, 5000);
-    return () => clearTimeout(t);
+    if (!redirectModal) {
+      setRedirectError(null);
+      return;
+    }
+
+    let cancelled = false;
+    let openTimer: ReturnType<typeof setTimeout> | undefined;
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
+    (async () => {
+      try {
+        const res = await fetch(`${basePath}/api/hosting/${redirectModal.hosting.id}/sso`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ service: redirectModal.service }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) {
+          return;
+        }
+        if (!res.ok || !data.url) {
+          setRedirectError(data.error || 'No se pudo crear la sesión automática');
+          return;
+        }
+        openTimer = setTimeout(() => {
+          if (!cancelled) {
+            window.open(data.url as string, '_blank', 'noopener,noreferrer');
+            setRedirectModal(null);
+            setRedirectError(null);
+          }
+        }, 1500);
+      } catch {
+        if (!cancelled) {
+          setRedirectError('Error de conexión con el panel');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (openTimer) {
+        clearTimeout(openTimer);
+      }
+    };
   }, [redirectModal]);
 
   const nearQuotaAccounts = useMemo(() => {
@@ -937,7 +981,7 @@ export default function HostingPage() {
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline-primary p-8 m-0"
-                                onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/cpanel', title: 'cPanel' })}
+                                onClick={() => setRedirectModal({ hosting: h, service: 'cpanel', title: 'cPanel' })}
                                 title="Acceder a cPanel"
                               >
                                 <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/static/images/cpanel.png`} alt="cPanel" width={20} height={20} />
@@ -945,7 +989,7 @@ export default function HostingPage() {
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline-secondary p-8 m-0"
-                                onClick={() => setRedirectModal({ hosting: h, url: 'https://instanceshape.com/webmail', title: 'Webmail' })}
+                                onClick={() => setRedirectModal({ hosting: h, service: 'webmail', title: 'Webmail' })}
                                 title="Acceder a Webmail"
                               >
                                 <i className="ti-email" style={{ fontSize: 18 }} />
@@ -1262,7 +1306,9 @@ export default function HostingPage() {
               </div>
               <div className="modal-body ta-c p-30">
                 <p className="c-grey-800 fsz-md mB-15">
-                  A continuación será redirigido al inicio de sesión de {redirectModal.title}.
+                  {redirectError
+                    ? redirectError
+                    : `Abriendo ${redirectModal.title} con sesión automática.`}
                 </p>
                 {redirectModal.title === 'cPanel' && (
                   <div className="ta-l mB-20 p-15 bdrs-3" style={{ backgroundColor: 'rgba(0,0,0,0.04)' }}>
@@ -1275,7 +1321,9 @@ export default function HostingPage() {
                   <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Cargando...</span>
                   </div>
-                  <span className="c-grey-600 fsz-sm">Redirigiendo en 5 segundos...</span>
+                  <span className="c-grey-600 fsz-sm">
+                    {redirectError ? 'No se abrió la sesión automática.' : 'Abriendo sesión...'}
+                  </span>
                 </div>
               </div>
             </div>

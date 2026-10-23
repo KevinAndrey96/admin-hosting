@@ -12,10 +12,32 @@ const envFiles = [
   path.join(scriptDir, '.env'),
 ];
 
+function loadEnvFile(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    for (const rawLine of content.split(/\r?\n/)) {
+      const trimmed = rawLine.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      let val = trimmed.slice(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (process.env[key] === undefined) {
+        process.env[key] = val;
+      }
+    }
+  } catch (err) {
+    console.warn(`Could not load ${filePath}:`, err.message);
+  }
+}
+
 for (const envFile of envFiles) {
   if (fs.existsSync(envFile)) {
     console.log(`Loading environment variables from: ${envFile}`);
-    require('dotenv').config({ path: envFile });
+    loadEnvFile(envFile);
     break;
   }
 }

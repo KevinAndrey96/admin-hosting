@@ -1,4 +1,4 @@
-# Modelo de Negocio, Paquetes y Precios - Instance Shape
+# Modelo de Negocio, Paquetes y Precios - Azulática
 *Versión: 1.0 (2026-2027)*  
 *Moneda Oficial: COP (Pesos Colombianos)*  
 *Infraestructura: Cloud cPanel & LiteSpeed Server (46.224.80.244 / Reseller `shape`)*
@@ -7,7 +7,7 @@
 
 ## 1. Visión General del Negocio
 
-**Instance Shape** (`instanceshape.com`) es una plataforma especializada en alojamiento web de alta velocidad, registro automatizado de dominios y gestión integral de servicios digitales para profesionales, pymes y agencias en Colombia e Hispanoamérica.
+**Azulática** (`instanceshape.com`) es una plataforma especializada en alojamiento web de alta velocidad, registro automatizado de dominios y gestión integral de servicios digitales para profesionales, pymes y agencias en Colombia e Hispanoamérica.
 
 ### Propuesta de Valor
 - **Almacenamiento NVMe/SSD de alta velocidad** con aislamiento de recursos.

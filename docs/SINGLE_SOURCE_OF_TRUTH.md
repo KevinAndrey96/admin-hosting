@@ -1,15 +1,24 @@
-# Instance Shape — Fuente Única de Verdad (Single Source of Truth)
-**Versión:** 2.1.0 (Producción)  
-**Última actualización:** 17 de Octubre de 2026  
-**Servidor de Infraestructura:** `46.224.80.244` (WHM / cPanel `shape` • `instanceshape.com`)  
-**Aplicación:** Next.js 13.5 Standalone en Phusion Passenger (`/mnt/atlas/shape/admin`)  
-**Base de Datos de Producción:** MySQL (`shape_hosting` en `127.0.0.1:3306`)  
+# Azulática — Fuente Única de Verdad (Single Source of Truth)
+**Versión:** 2.2.0 (Producción)  
+**Última actualización:** 23 de Octubre de 2026  
+**Servidor de Infraestructura:** `46.224.80.244`  
+**Aplicación:** el mismo Next.js 13.5 standalone en dos cuentas Passenger  
+**Base de Datos de Producción:** MySQL (`shape_hosting` en `127.0.0.1:3306`), compartida  
+
+| Marca | URL del panel | Cuenta | `APP_URL` |
+|---|---|---|---|
+| Instance Shape | `https://instanceshape.com/admin` | `shape` · Node 24 | `https://instanceshape.com/admin` |
+| Azulática | `https://azulatica.com/admin` | `azulatica` · Node 20 | `https://azulatica.com` |
+
+El código vive en este directorio (`Admin/admin`) y en GitHub `KevinAndrey96/admin-hosting` (rama `admin-hosting`). El 2026-10-23 se publicó ahí el fuente compartido (SSO, logo con respaldo, caché de ajustes y marca Azulática). Lo que ya corre en los dos dominios es el standalone desplegado ese mismo día; este commit no vuelve a construir el servidor. Cada cuenta guarda su propio `.env`; no se intercambian secretos al desplegar.
+
+**Keep-warm (hora Colombia), las dos cuentas:** cada 30 min de 08:00 a 19:59 (`0,30 8-19 * * *`) y cada hora de 20:00 a 07:59 (`0 20-23,0-7 * * *`), contra `/admin/signin?w=<timestamp>`. En `shape` también siguen el recordatorio de renovaciones (`0 12 * * *`) y la limpieza de disco de los miércoles (`0 0 * * 3`).  
 
 ---
 
 ## 1. Principio Rector: El Panel como Fuente Única de Verdad
 
-A partir de esta versión, el **Panel Administrativo de Instance Shape** se consolida formalmente como la **Fuente Única de Verdad (Single Source of Truth)** para:
+A partir de esta versión, el **Panel Administrativo de Azulática** se consolida formalmente como la **Fuente Única de Verdad (Single Source of Truth)** para:
 1. **Catálogo de Planes y Precios:** Valores autorizados de venta al público en COP y reglas de bonificación/inclusión.
 2. **Ciclo de Vida y Estados de Facturación:** Control de pagos, vencimientos y renovaciones.
 3. **Registro y Proveedores de Dominios:** Información contrastada con los registradores autorizados vía WHOIS.
@@ -20,7 +29,7 @@ A partir de esta versión, el **Panel Administrativo de Instance Shape** se cons
 
 ---
 
-## 2. Catálogo Oficial de Planes de Hosting Instance Shape
+## 2. Catálogo Oficial de Planes de Hosting Azulática
 
 Todos los paquetes corresponden 1:1 con las definiciones físicas de WHM y cuentan con límites automáticos de antispam y soporte para **LiteSpeed Web Server**.
 
@@ -170,4 +179,4 @@ Todos los registros fueron auditados y sincronizados en la base de datos de prod
    ```
 
 ---
-*Instance Shape SAS • Infraestructura Cloud y Soluciones Digitales*
+*Azulática • Infraestructura Cloud y Soluciones Digitales*

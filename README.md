@@ -1,6 +1,6 @@
-# Instance Shape - Panel Administrativo (Hosting & Domains)
+# Azulática - Panel Administrativo (Hosting & Domains)
 
-Panel de administración integral y portal de clientes para **Instance Shape** (`instanceshape.com`), desarrollado con **Next.js 13.5 (App Router)**, **Prisma ORM (MySQL)** y sincronización en tiempo real con **cPanel / WHM API** y **Spaceship API**.
+Panel de administración integral y portal de clientes para **Azulática** (`instanceshape.com`), desarrollado con **Next.js 13.5 (App Router)**, **Prisma ORM (MySQL)** y sincronización en tiempo real con **cPanel / WHM API** y **Spaceship API**.
 
 ---
 

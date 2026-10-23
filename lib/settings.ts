@@ -21,12 +21,25 @@ const DEFAULTS: Record<string, string> = {
 
 export type SettingsMap = Record<string, string>;
 
+let settingsCache: { data: SettingsMap; expiresAt: number } | null = null;
+const SETTINGS_CACHE_TTL_MS = 120_000;
+
+export function invalidateSettingsCache(): void {
+  settingsCache = null;
+}
+
 export async function getSettings(): Promise<SettingsMap> {
+  const now = Date.now();
+  if (settingsCache && settingsCache.expiresAt > now) {
+    return settingsCache.data;
+  }
+
   const rows = await prisma.setting.findMany();
   const map: SettingsMap = { ...DEFAULTS };
   for (const row of rows) {
     map[row.key] = row.value;
   }
+  settingsCache = { data: map, expiresAt: now + SETTINGS_CACHE_TTL_MS };
   return map;
 }
 
@@ -41,6 +54,7 @@ export async function setSetting(key: string, value: string): Promise<void> {
     create: { key, value },
     update: { value },
   });
+  invalidateSettingsCache();
 }
 
 export async function setSettings(data: SettingsMap): Promise<void> {
@@ -49,6 +63,7 @@ export async function setSettings(data: SettingsMap): Promise<void> {
       await setSetting(key, value);
     }
   }
+  invalidateSettingsCache();
 }
 
 export async function ensureDefaultSettings(): Promise<void> {

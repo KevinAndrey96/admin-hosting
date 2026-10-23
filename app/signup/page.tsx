@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import BrandLogo from '@/app/components/BrandLogo';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
 import { useTheme } from '@/app/hooks/useTheme';
@@ -10,7 +10,7 @@ import { useTheme } from '@/app/hooks/useTheme';
 const MIN_PASSWORD_LENGTH = 8;
 
 export default function SignUpPage() {
-  const { logoUrl, companyName } = useSettings();
+  const { settings, companyName } = useSettings();
   const { theme, toggleTheme, mounted } = useTheme();
   const router = useRouter();
   const [fullName, setFullName] = useState('');
@@ -117,13 +117,12 @@ export default function SignUpPage() {
       <div className="bd bgc-white p-40 bdrs-10" style={{ width: '100%', maxWidth: 400, boxShadow: 'var(--shadow-lg)' }}>
         <div className="ta-c mB-30">
           <Link href="/" className="td-n">
-            <Image
-              src={logoUrl}
+            <BrandLogo
+              src={settings?.logo_url}
               alt={companyName}
               width={60}
               height={60}
               className="mB-15"
-              unoptimized
             />
           </Link>
           <h4 className="m-0">Registro</h4>

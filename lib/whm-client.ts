@@ -283,6 +283,116 @@ export function deriveWhmUsernameFromDomain(domain: string): string {
   return /^\d/.test(sanitized) ? `u${sanitized}`.slice(0, 16) : sanitized;
 }
 
+export type WhmUserSessionService = 'cpanel' | 'webmail';
+
+function mapWhmSessionService(service: WhmUserSessionService): 'cpaneld' | 'webmaild' {
+  return service === 'webmail' ? 'webmaild' : 'cpaneld';
+}
+
+/**
+ * Resolves the live WHM/cPanel username for a hosting row (domain match, then username).
+ */
+export async function whmResolveAccountUsername(hosting: {
+  username: string;
+  domainFqdns?: string[];
+}): Promise<string> {
+  const whmResult = await whmListAccounts();
+  const whmByDomain = whmResult.ok && whmResult.accounts ? whmResult.accounts : {};
+  const domains = (hosting.domainFqdns ?? [])
+    .map((d) => d.toLowerCase().trim())
+    .filter(Boolean);
+  const matchedDomain = domains.find((d) => d in whmByDomain);
+  if (matchedDomain) {
+    return whmByDomain[matchedDomain].user;
+  }
+  const matchedByUser = Object.values(whmByDomain).find(
+    (a) => a.user.toLowerCase() === hosting.username.toLowerCase()
+  );
+  return matchedByUser?.user ?? hosting.username;
+}
+
+/**
+ * Creates a one-time WHM login URL for cPanel or Webmail (create_user_session).
+ */
+export async function whmCreateUserSession(
+  cpanelUser: string,
+  service: WhmUserSessionService
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  if (!WHM_TOKEN?.trim()) {
+    return { ok: false, error: 'WHM_API_TOKEN no configurado' };
+  }
+
+  const user = cpanelUser.trim();
+  if (!user) {
+    return { ok: false, error: 'Usuario cPanel no válido' };
+  }
+
+  const search = new URLSearchParams({
+    'api.version': '1',
+    user,
+    service: mapWhmSessionService(service),
+  }).toString();
+  const path = `/json-api/create_user_session?${search}`;
+
+  return new Promise((resolve) => {
+    const opts: https.RequestOptions = {
+      hostname: WHM_HOST,
+      port: parseInt(WHM_PORT || '2087', 10),
+      path,
+      method: 'GET',
+      agent: httpsAgent,
+      timeout: DEFAULT_TIMEOUT_MS,
+      headers: {
+        Authorization: `whm ${WHM_USER}:${WHM_TOKEN}`,
+      },
+    };
+
+    const req = https.request(opts, (res) => {
+      let body = '';
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(body || '{}');
+          const meta = data?.metadata ?? {};
+          const result = meta.result;
+          const url = typeof data?.data?.url === 'string' ? data.data.url : undefined;
+          const isOk =
+            res.statusCode === 200 &&
+            (result === 1 || result === '1') &&
+            Boolean(url);
+          if (isOk && url) {
+            resolve({ ok: true, url });
+            return;
+          }
+          const reason =
+            meta.reason ||
+            meta.output ||
+            (typeof data?.errors === 'string' ? data.errors : null);
+          resolve({
+            ok: false,
+            error: (reason || `HTTP ${res.statusCode}`).toString().trim(),
+          });
+        } catch {
+          resolve({ ok: false, error: 'Respuesta inválida de WHM' });
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      resolve({ ok: false, error: err.message || 'Error de conexión con WHM' });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ ok: false, error: 'Timeout al conectar con WHM' });
+    });
+
+    req.end();
+  });
+}
+
 /** domain (lowercase) -> { user, suspended, diskused } */
 export type WhmAccountByDomain = Record<string, { user: string; suspended: number; diskused?: string }>;
 

@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import BrandLogo from '@/app/components/BrandLogo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
 import { useTheme } from '@/app/hooks/useTheme';
 
 export default function SignInPage() {
-  const { logoUrl, companyName } = useSettings();
+  const { settings, companyName } = useSettings();
   const { theme, toggleTheme, mounted } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -110,13 +110,12 @@ export default function SignInPage() {
       >
         <div className="ta-c mB-30">
           <Link href="/" className="td-n">
-            <Image
-              src={logoUrl}
+            <BrandLogo
+              src={settings?.logo_url}
               alt={companyName}
               width={60}
               height={60}
               className="mB-15"
-              unoptimized
             />
           </Link>
           <h4 className="m-0">Iniciar sesión</h4>

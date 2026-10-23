@@ -467,7 +467,7 @@ export function buildMonthlyClientDigestEmail(params: {
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#1e293b;font-weight:600;">${h.packageName} <span style="font-weight:normal;color:#64748b;">(${h.username})</span></td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${quota}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#2563eb;">
-          <a href="https://instanceshape.com/webmail" style="color:#2563eb;text-decoration:none;font-weight:600;" target="_blank">Abrir Webmail →</a>
+          <a href="https://azulatica.com:2096" style="color:#2563eb;text-decoration:none;font-weight:600;" target="_blank">Abrir Webmail →</a>
         </td>
       </tr>`;
       }).join('')
@@ -551,7 +551,7 @@ export function buildMonthlyClientDigestEmail(params: {
                 📧 Configuración de Correo Corporativo y Webmail:
               </h4>
               <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#334155;">
-                <li><strong>Acceso Webmail:</strong> Puedes consultar tu correo en cualquier momento desde tu navegador en <a href="https://instanceshape.com/webmail" style="color:#2563eb;font-weight:600;" target="_blank">instanceshape.com/webmail</a>.</li>
+                <li><strong>Acceso Webmail:</strong> Puedes consultar tu correo en cualquier momento desde tu navegador en <a href="https://azulatica.com:2096" style="color:#2563eb;font-weight:600;" target="_blank">azulatica.com:2096</a>.</li>
                 <li><strong>Sincronización en Outlook, Gmail o Móvil:</strong>
                   <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;margin-top:6px;font-family:monospace;font-size:12px;color:#1e293b;">
                     • Servidor de Entrada (IMAP): puerto <strong>993</strong> con SSL/TLS activado<br/>
@@ -564,7 +564,7 @@ export function buildMonthlyClientDigestEmail(params: {
             </div>
 
             <p style="margin:0;font-size:12px;color:#64748b;text-align:center;">
-              ¿Necesitas asistencia técnica o una cotización de ampliación? Puedes responder a este correo o escribir a nuestro canal de soporte en <a href="${appUrl}${basePath}/soporte" style="color:#2563eb;">Soporte Instance Shape</a>.
+              ¿Necesitas asistencia técnica o una cotización de ampliación? Puedes responder a este correo o escribir a nuestro canal de soporte en <a href="${appUrl}${basePath}/soporte" style="color:#2563eb;">Soporte Azulática</a>.
             </p>
 
           </td>

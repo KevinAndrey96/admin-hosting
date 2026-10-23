@@ -95,7 +95,7 @@ model Setting {
 // Reseller - Packages, Domains, Hosting
 // -----------------------------------------------------------------------------
 
-/// Catálogo de Planes de Hosting de Instance Shape.
+/// Catálogo de Planes de Hosting de Azulática.
 /// Los IDs corresponden 1:1 con los nombres de paquete en WHM:
 /// - shape_bronze: 500 MB, 50 GB BW, 5 emails, 0 addons, 20 emails/h
 /// - shape_silver: 1.000 MB, 100 GB BW, 5 emails, 0 addons, 20 emails/h

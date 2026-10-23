@@ -2,12 +2,12 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import BrandLogo from '@/app/components/BrandLogo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSettings } from '@/app/hooks/useSettings';
 
 function ResetPasswordForm() {
-  const { logoUrl, companyName } = useSettings();
+  const { settings, companyName } = useSettings();
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -80,13 +80,12 @@ function ResetPasswordForm() {
       <div className="bd bgc-white p-40 bdrs-10" style={{ width: '100%', maxWidth: 400, boxShadow: 'var(--shadow-lg)' }}>
         <div className="ta-c mB-30">
           <Link href="/" className="td-n">
-            <Image
-              src={logoUrl}
+            <BrandLogo
+              src={settings?.logo_url}
               alt={companyName}
               width={60}
               height={60}
               className="mB-15"
-              unoptimized
             />
           </Link>
           <h4 className="m-0">Nueva contraseña</h4>

@@ -1,5 +1,5 @@
 # Auditoría de Cuentas cPanel y Estrategia de Optimización (Right-Sizing)
-*Instance Shape Cloud Hosting - Informe Técnico y Operativo*  
+*Azulática Cloud Hosting - Informe Técnico y Operativo*  
 *Fecha de Auditoría: Octubre 2026*  
 *Versión:* 2.1.0
 
@@ -56,7 +56,7 @@ A continuación se detalla el estado auditado directamente desde la API de cPane
 
 ---
 
-## 3. Matriz Consolidada de Paquetes Instance Shape
+## 3. Matriz Consolidada de Paquetes Azulática
 
 | Identificador WHM | Nombre Comercial | Disco (MB) | Ancho de Banda (GB) | Cuentas Correo | Dominios Addon | Antispam (emails/h) | Tarifa Anual (COP) |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -68,4 +68,4 @@ A continuación se detalla el estado auditado directamente desde la API de cPane
 | `shape_ssh` | **Shape SSH (Transitorio)** | Ilimitado | Ilimitado | Ilimitadas | Ilimitados | 300 | Exclusivo Interno |
 
 ---
-*Instance Shape SAS • Auditoría y Optimización de Infraestructura*
+*Azulática • Auditoría y Optimización de Infraestructura*

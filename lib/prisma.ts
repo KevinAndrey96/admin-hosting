@@ -4,7 +4,7 @@ import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
-  const url = process.env.DATABASE_URL || 'mysql://shape_hosting:Hosting2026@127.0.0.1:3306/shape_hosting';
+  const url = process.env.DATABASE_URL || 'mysql://user:password@127.0.0.1:3306/app';
 
   const parsed = new URL(url);
   const adapter = new PrismaMariaDb({

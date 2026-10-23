@@ -6,7 +6,11 @@ import { cookies } from 'next/headers';
 export async function GET() {
   try {
     const settings = await getSettings();
-    return NextResponse.json(settings);
+    return NextResponse.json(settings, {
+      headers: {
+        'Cache-Control': 'public, max-age=120, stale-while-revalidate=300',
+      },
+    });
   } catch (error) {
     console.error('Settings GET error:', error);
     return NextResponse.json(

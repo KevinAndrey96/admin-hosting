@@ -14,7 +14,7 @@ import {
 import { generateAndSendDailyAdminReport } from '@/lib/daily-admin-report';
 
 /**
- * Endpoint de Cron Automatizado de Instance Shape.
+ * Endpoint de Cron Automatizado de Azulática.
  *
  * Tareas:
  * 1. DIARIAMENTE: Envía al Administrador el Informe Ejecutivo Diario:
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const settings = await getSettings();
     const enabled = settings.renewal_reminder_enabled === 'true' || settings.renewal_reminder_enabled === '1';
 
-    const companyName = settings.company_name || 'Instance Shape SAS';
+    const companyName = settings.company_name || 'Azulática';
     const logoUrl = settings.logo_url || '';
     const logoFullUrl = logoUrl?.startsWith('http') ? logoUrl : logoUrl ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://instanceshape.com'}${logoUrl}` : '';
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';

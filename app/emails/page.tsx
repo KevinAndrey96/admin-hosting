@@ -322,7 +322,7 @@ function EmailsContent() {
           </div>
           <div className="col-md-6 ta-e d-f gap-2 jc-e fxw-w">
             <a
-              href="https://instanceshape.com/webmail"
+              href="https://azulatica.com:2096"
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-outline-secondary d-if ai-c gap-2"
@@ -553,7 +553,7 @@ function EmailsContent() {
                               <i className="ti-harddrives" />
                             </button>
                             <a
-                              href="https://instanceshape.com/webmail"
+                              href="https://azulatica.com:2096"
                               target="_blank"
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-primary p-8"
