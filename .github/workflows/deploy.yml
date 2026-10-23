@@ -5,11 +5,14 @@ on:
     branches:
       - admin-hosting
       - main
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      HAS_SSH_KEY: ${{ secrets.CPANEL_SSH_KEY != '' }}
 
     steps:
       - name: Checkout repository
@@ -26,15 +29,23 @@ jobs:
 
       - name: Generate Prisma Client & Build Next.js
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'mysql://shape_hosting:Hosting2026@127.0.0.1:3306/shape_hosting' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'mysql://user:password@127.0.0.1:3306/app' }}
           NEXT_PUBLIC_BASE_PATH: /admin
         run: npm run build
 
+      # Deploy runs only on manual dispatch with an SSH key secret: the host uses
+      # ephemeral audit keys and CloudLinux NPROC limits on account shape.
+      - name: Skip deploy notice
+        if: github.event_name != 'workflow_dispatch' || env.HAS_SSH_KEY != 'true'
+        run: echo "Build OK. Deploy skipped (manual dispatch with CPANEL_SSH_KEY required)."
+
       - name: Create Clean Deploy ZIP
+        if: github.event_name == 'workflow_dispatch' && env.HAS_SSH_KEY == 'true'
         run: |
           zip -r admin-deploy-prod.zip .htaccess package.json start-server.js next.config.js tsconfig.json prisma.config.ts .next/standalone app lib prisma types public -x "*.DS_Store" -x "node_modules/*" -x ".next/cache/*"
 
       - name: Transfer Deployment Package to cPanel
+        if: github.event_name == 'workflow_dispatch' && env.HAS_SSH_KEY == 'true'
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.CPANEL_SSH_HOST || '46.224.80.244' }}
@@ -45,6 +56,7 @@ jobs:
           target: '/mnt/atlas/shape/admin'
 
       - name: Extract & Reload Passenger Application
+        if: github.event_name == 'workflow_dispatch' && env.HAS_SSH_KEY == 'true'
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.CPANEL_SSH_HOST || '46.224.80.244' }}
